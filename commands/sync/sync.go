@@ -19,7 +19,7 @@ func New(sync *calendar.Manager) subcommands.Command  {
 }
 
 func (*authListCmd) Name() string {
-	return "calendar-sync"
+	return "sync"
 }
 
 func (*authListCmd) Synopsis() string {

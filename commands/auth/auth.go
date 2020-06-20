@@ -1,4 +1,4 @@
-package authadd
+package auth
 
 import (
 	"calendar/clients/tmanager"
@@ -19,7 +19,7 @@ func New(tokenManager *tmanager.Manager) subcommands.Command  {
 }
 
 func (*authAddCmd) Name() string {
-	return "auth-add"
+	return "auth"
 }
 
 func (*authAddCmd) Synopsis() string {

@@ -4,7 +4,7 @@ import (
 	"calendar/clients/calendar"
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
-	"calendar/commands/authadd"
+	"calendar/commands/auth"
 	"calendar/commands/list"
 	synccmd "calendar/commands/sync"
 	"flag"
@@ -25,7 +25,7 @@ func setup() error {
 	cm := calendar.New(tm, ui)
 
 	subcommands.Register(subcommands.HelpCommand(), "")
-	subcommands.Register(authadd.New(tm), "")
+	subcommands.Register(auth.New(tm), "")
 	subcommands.Register(list.New(cm), "")
 	subcommands.Register(synccmd.New(cm), "")
 	flag.Parse()

@@ -21,7 +21,7 @@ func New(calendarManager *calendar.Manager) subcommands.Command  {
 }
 
 func (*authListCmd) Name() string {
-	return "calendar-list"
+	return "list"
 }
 
 func (*authListCmd) Synopsis() string {
