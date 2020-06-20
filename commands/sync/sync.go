@@ -33,7 +33,7 @@ func (*authListCmd) Usage() string {
 func (p *authListCmd) SetFlags(*flag.FlagSet) {}
 
 func (p *authListCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if err := p.sync.Sync(); err != nil {
+	if err := p.sync.Sync("", "", "", ""); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}
