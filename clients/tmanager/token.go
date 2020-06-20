@@ -67,7 +67,7 @@ func (m *Manager) Config() *oauth2.Config {
 }
 
 // GetTokenFromWeb requests a token from the web, then returns the retrieved token.
-func (m *Manager) Auth() error {
+func (m *Manager) Auth(ctx context.Context, ) error {
 	config := m.Config()
 
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
@@ -78,7 +78,7 @@ func (m *Manager) Auth() error {
 		return errors.Wrap(err, "unable to readTokens authorization code")
 	}
 
-	token, err := config.Exchange(context.Background(), authCode)
+	token, err := config.Exchange(ctx, authCode)
 	if err != nil {
 		return errors.Wrap(err, "Unable to retrieve token from web")
 	}

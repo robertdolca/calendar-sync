@@ -34,8 +34,8 @@ func (*authListCmd) Usage() string {
 
 func (p *authListCmd) SetFlags(*flag.FlagSet) {}
 
-func (p *authListCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	usersCalendars, err := p.calendarManager.UsersCalendars()
+func (p *authListCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	usersCalendars, err := p.calendarManager.UsersCalendars(ctx)
 	if err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure

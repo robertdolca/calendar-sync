@@ -19,10 +19,10 @@ func New(tokenManager *tmanager.Manager) *Manager {
 	}
 }
 
-func (i *Manager) Email(token *oauth2.Token) (string, error) {
+func (i *Manager) Email(ctx context.Context, token *oauth2.Token) (string, error) {
 	config := i.tokenManager.Config()
 
-	email, err := userEmail(context.Background(), config, token)
+	email, err := userEmail(ctx, config, token)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get user email")
 	}

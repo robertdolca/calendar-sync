@@ -41,8 +41,8 @@ func New(tokenManager *tmanager.Manager, userInfo *userinfo.Manager) *Manager {
 	}
 }
 
-func (s *Manager) UsersCalendars() ([]UserCalendars, error) {
-	calendarTokens, err := s.usersCalendarsTokens()
+func (s *Manager) UsersCalendars(ctx context.Context) ([]UserCalendars, error) {
+	calendarTokens, err := s.usersCalendarsTokens(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -58,17 +58,17 @@ func (s *Manager) UsersCalendars() ([]UserCalendars, error) {
 	return result, nil
 }
 
-func (s *Manager) usersCalendarsTokens() ([]TokenCalendars, error) {
+func (s *Manager) usersCalendarsTokens(ctx context.Context, ) ([]TokenCalendars, error) {
 	tokens := s.tokenManager.List()
 
 	result := make([]TokenCalendars, 0, len(tokens))
 	for _, token := range tokens {
-		email, err := s.userInfo.Email(&token)
+		email, err := s.userInfo.Email(ctx, &token)
 		if err != nil {
 			return nil, err
 		}
 
-		calendars, err := s.calendars(&token)
+		calendars, err := s.calendars(ctx, &token)
 		if err != nil {
 			return nil, err
 		}
@@ -83,8 +83,7 @@ func (s *Manager) usersCalendarsTokens() ([]TokenCalendars, error) {
 	return result, nil
 }
 
-func (s *Manager) calendars(token *oauth2.Token) ([]Into, error) {
-	ctx := context.Background()
+func (s *Manager) calendars(ctx context.Context, token *oauth2.Token) ([]Into, error) {
 	srv, err := calendar.NewService(ctx, option.WithTokenSource(s.tokenManager.Config().TokenSource(ctx, token)))
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create calendar client")
@@ -103,13 +102,12 @@ func (s *Manager) calendars(token *oauth2.Token) ([]Into, error) {
 	return calendars, nil
 }
 
-func (s *Manager) Sync(srcAccount, srcCalendar, dstAccount, dstCalendar string) error {
+func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount, dstCalendar string) error {
 
 	return nil
 }
 
-func (s *Manager) sync(token *oauth2.Token) error {
-	ctx := context.Background()
+func (s *Manager) sync(ctx context.Context, token *oauth2.Token) error {
 	srv, err := calendar.NewService(ctx, option.WithTokenSource(s.tokenManager.Config().TokenSource(ctx, token)))
 	if err != nil {
 		return errors.Wrap(err, "unable to create calendar client")

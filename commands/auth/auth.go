@@ -32,8 +32,8 @@ func (*authAddCmd) Usage() string {
 
 func (a *authAddCmd) SetFlags(*flag.FlagSet) {}
 
-func (a *authAddCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if err := a.tokenManager.Auth(); err != nil {
+func (a *authAddCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if err := a.tokenManager.Auth(ctx); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}
