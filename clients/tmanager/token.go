@@ -22,6 +22,7 @@ const (
 var (
 	scope = []string{
 		calendar.CalendarReadonlyScope,
+		calendar.CalendarEventsScope,
 		goauth2.UserinfoEmailScope,
 	}
 )
