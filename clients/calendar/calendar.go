@@ -104,17 +104,32 @@ func (s *Manager) calendars(ctx context.Context, token *oauth2.Token) ([]Into, e
 
 func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount, dstCalendar string) error {
 
-	return nil
+	calendarTokens, err := s.usersCalendarsTokens(ctx)
+	if err != nil {
+		return err
+	}
+
+	srcToken := findToken(calendarTokens, srcAccount)
+	if srcToken == nil {
+		return errors.New("source account not authenticated")
+	}
+
+	dstToken := findToken(calendarTokens, dstAccount)
+	if dstToken == nil {
+		return errors.New("source account not authenticated")
+	}
+
+	return s.sync(ctx, srcToken, dstToken, srcCalendar, dstCalendar)
 }
 
-func (s *Manager) sync(ctx context.Context, token *oauth2.Token) error {
-	srv, err := calendar.NewService(ctx, option.WithTokenSource(s.tokenManager.Config().TokenSource(ctx, token)))
+func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, srcCalendar, dstCalendar string) error {
+	srv, err := calendar.NewService(ctx, option.WithTokenSource(s.tokenManager.Config().TokenSource(ctx, srcToken)))
 	if err != nil {
 		return errors.Wrap(err, "unable to create calendar client")
 	}
 
 	err = srv.Events.
-		List("primary").
+		List(srcCalendar).
 		UpdatedMin(time.Now().AddDate(0, 0, -4).Format(time.RFC3339)).
 		Pages(ctx, s.syncEvents)
 
@@ -149,4 +164,13 @@ func calendarListEntryToCalendar(entry *calendar.CalendarListEntry) Into {
 		Id: entry.Id,
 		Deleted: entry.Deleted,
 	}
+}
+
+func findToken(tokensEmail []TokenCalendars, email string) *oauth2.Token {
+	for _, tokeEmail := range tokensEmail {
+		if tokeEmail.Email == email {
+			return &tokeEmail.Token
+		}
+	}
+	return nil
 }
