@@ -1,7 +1,7 @@
-package authlist
+package sync
 
 import (
-	"calendar/clients/userinfo"
+	"calendar/clients/calendar"
 	"context"
 	"flag"
 	"fmt"
@@ -9,21 +9,21 @@ import (
 )
 
 type authListCmd struct {
-	userInfo *userinfo.Manager
+	sync *calendar.Manager
 }
 
-func New(userInfo *userinfo.Manager) subcommands.Command  {
+func New(sync *calendar.Manager) subcommands.Command  {
 	return &authListCmd{
-		userInfo: userInfo,
+		sync: sync,
 	}
 }
 
 func (*authListCmd) Name() string {
-	return "auth-list"
+	return "calendar-sync"
 }
 
 func (*authListCmd) Synopsis() string {
-	return "List authenticated accounts"
+	return "Copies all events from the source calendar to the destination calendar"
 }
 
 func (*authListCmd) Usage() string {
@@ -33,13 +33,9 @@ func (*authListCmd) Usage() string {
 func (p *authListCmd) SetFlags(*flag.FlagSet) {}
 
 func (p *authListCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	emails, err := p.userInfo.AllEmails()
-	if err != nil {
+	if err := p.sync.Sync(); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
-	}
-	for _, email := range emails {
-		fmt.Println(email)
 	}
 	return subcommands.ExitSuccess
 }

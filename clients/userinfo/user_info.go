@@ -13,27 +13,21 @@ type Manager struct {
 	tokenManager *tmanager.Manager
 }
 
-func New(tokenManager *tmanager.Manager) (*Manager, error) {
+func New(tokenManager *tmanager.Manager) *Manager {
 	return &Manager{
 		tokenManager: tokenManager,
-	}, nil
+	}
 }
 
-func (i *Manager) AllEmails() ([]string, error) {
+func (i *Manager) Email(token *oauth2.Token) (string, error) {
 	config := i.tokenManager.Config()
-	tokens := i.tokenManager.List()
-	emails := make([]string, 0, len(tokens))
 
-	for _, token := range tokens {
-		email, err := userEmail(context.Background(), config, &token)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get user email")
-		}
-
-		emails = append(emails, email)
+	email, err := userEmail(context.Background(), config, token)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get user email")
 	}
 
-	return emails, nil
+	return email, nil
 }
 
 func userEmail(ctx context.Context, config *oauth2.Config, token *oauth2.Token) (string, error) {

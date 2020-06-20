@@ -1,10 +1,12 @@
 package main
 
 import (
+	"calendar/clients/calendar"
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
 	"calendar/commands/authadd"
-	"calendar/commands/authlist"
+	"calendar/commands/list"
+	synccmd "calendar/commands/sync"
 	"flag"
 	"fmt"
 	"github.com/google/subcommands"
@@ -19,21 +21,20 @@ func setup() error {
 		return errors.Wrap(err, "failed to create token manager")
 	}
 
-	ui, err := userinfo.New(tm)
-	if err != nil {
-		return errors.Wrap(err, "failed to create user info")
-	}
+	ui := userinfo.New(tm)
+	cm := calendar.New(tm, ui)
 
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(authadd.New(tm), "")
-	subcommands.Register(authlist.New(ui), "")
+	subcommands.Register(list.New(cm), "")
+	subcommands.Register(synccmd.New(cm), "")
 	flag.Parse()
 
 	return nil
 }
 
 func main() {
-    if err := setup(); err != nil {
+	if err := setup(); err != nil {
 		fmt.Println(err)
 		os.Exit(int(subcommands.ExitFailure))
 	}
