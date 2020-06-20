@@ -12,6 +12,10 @@ import (
 	"time"
 )
 
+var (
+	updateInterval = time.Now().AddDate(0, 0, -4).Format(time.RFC3339)
+)
+
 type Into struct {
 	Summary string
 	Id string
@@ -123,24 +127,33 @@ func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount,
 }
 
 func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, srcCalendar, dstCalendar string) error {
-	srv, err := calendar.NewService(ctx, option.WithTokenSource(s.tokenManager.Config().TokenSource(ctx, srcToken)))
+	config := s.tokenManager.Config()
+
+	srcService, err := calendar.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, srcToken)))
 	if err != nil {
 		return errors.Wrap(err, "unable to create calendar client")
 	}
 
-	err = srv.Events.
+	dstService, err := calendar.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, dstToken)))
+	if err != nil {
+		return errors.Wrap(err, "unable to create calendar client")
+	}
+
+	err = srcService.Events.
 		List(srcCalendar).
-		UpdatedMin(time.Now().AddDate(0, 0, -4).Format(time.RFC3339)).
-		Pages(ctx, s.syncEvents)
+		UpdatedMin(updateInterval).
+		Pages(ctx, func(events *calendar.Events) error {
+			return s.syncEvents(dstService, events)
+		})
 
 	if err != nil {
-		return errors.Wrap(err, "unable to retrieve events")
+		return errors.Wrap(err, "unable to sync events")
 	}
 
 	return nil
 }
 
-func (s *Manager) syncEvents(events *calendar.Events) error {
+func (s *Manager) syncEvents(dstService *calendar.Service, events *calendar.Events) error {
 	for _, event := range events.Items {
 		if event.Start == nil {
 			continue
