@@ -40,6 +40,18 @@ there. If a corresponding event exists it will be updated if necessary.
 The sync action looks at events created or updated on the source calendar
 within the last 2 hours.
 
+## Delete synced events
+
+```bash
+./calendar clear \
+  -account accountA@gmail.com \
+  -calendar dj3snc3c
+```
+
+This will remove all synced events regardless of the source calendar.
+
+For this operation to work well it requires the local sync DB to be preserved.
+
 ## Internals
 
 ### Google API app credentials

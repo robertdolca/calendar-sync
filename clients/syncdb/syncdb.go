@@ -92,6 +92,39 @@ func (db *DB) Find(e Event) (Record, error) {
 	return r, err
 }
 
+func (db *DB) ListDst(accountEmail, calendarID string) ([]Record, error) {
+	var result []Record
+
+	err := db.db.View(func(txn *badger.Txn) error {
+
+		it := txn.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+
+			data, err := item.ValueCopy(nil)
+			if err != nil {
+				return errors.Wrap(err, "failed to read record into buffer")
+			}
+
+			var record Record
+			if err := json.Unmarshal(data, &record); err != nil {
+				return errors.Wrap(err, "failed to serialize record")
+			}
+
+			if record.Dst.CalendarId != calendarID || record.Dst.AccountEmail != accountEmail {
+				continue
+			}
+
+			result = append(result, record)
+		}
+		return nil
+	})
+
+	return result, err
+}
+
 func (db *DB) Delete(e Event) error {
 	return db.db.Update(func(txn *badger.Txn) error {
 		if err := txn.Delete(buildKey(e)); err != nil {

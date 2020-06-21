@@ -155,7 +155,7 @@ func (s *Manager) syncExistingEvent(
 	log.Println("existing event")
 
 	if srcEvent.Status == "cancelled" {
-		return s.deleteExistingEvent(dstService, syncMetadata, r)
+		return s.deleteExistingEvent(dstService, r)
 	}
 
 	recurringEventId, err := s.mapRecurringEventId(syncMetadata, srcEvent)
@@ -172,14 +172,10 @@ func (s *Manager) syncExistingEvent(
 	return nil
 }
 
-func (s *Manager) deleteExistingEvent(
-	dstService *calendar.Service,
-	syncMetadata syncMetadata,
-	r syncdb.Record,
-) error {
+func (s *Manager) deleteExistingEvent(service *calendar.Service, r syncdb.Record) error {
 	log.Println("delete event")
 
-	dstEvent, err := dstService.Events.Get(syncMetadata.dstCalendar, r.Dst.Id).Do()
+	dstEvent, err := service.Events.Get(r.Dst.CalendarId, r.Dst.Id).Do()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get event before deletion")
 	}
@@ -189,7 +185,7 @@ func (s *Manager) deleteExistingEvent(
 		return s.syncDB.Delete(r.Src)
 	}
 
-	if err := dstService.Events.Delete(syncMetadata.dstCalendar, r.Dst.Id).Do(); err != nil {
+	if err := service.Events.Delete(r.Dst.CalendarId, r.Dst.Id).Do(); err != nil {
 		return errors.Wrapf(err, "failed to delete event")
 	}
 	return s.syncDB.Delete(r.Src)
