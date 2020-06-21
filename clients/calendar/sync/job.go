@@ -107,6 +107,9 @@ func (s *job) syncEvent(srcEvent *calendar.Event) error {
 	)
 	if err == syncdb.ErrNotFound {
 		if srcEvent.Status == ccommon.EventStatusCancelled {
+			if srcEvent.RecurringEventId != "" {
+				return s.deleteRecurringEventInstance(srcEvent)
+			}
 			return nil
 		}
 		return s.createEvent(srcEvent)
@@ -150,12 +153,12 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 		return errors.Wrapf(err, "failed to save sync mapping")
 	}
 
-	log.Printf("created event: %s, %s\n", dstEvent.Id, dstEvent.RecurringEventId)
+	log.Printf("created event: %s, %s\n", srcEvent.Id, srcEvent.RecurringEventId)
 	return nil
 }
 
 func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error {
-	log.Printf("existing event: %s\n", r.Dst.EventID)
+	log.Printf("existing event: %s\n", r.Src.EventID)
 
 	if srcEvent.Status == "cancelled" {
 		return s.deleteDstEvent(r)
@@ -173,11 +176,12 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 		return errors.Wrapf(err, "failed to update event")
 	}
 
-	log.Printf("created event: %s\n", dstEvent.Id)
+	log.Printf("updated event: %s\n", srcEvent.Id)
 	return nil
 }
 
 func (s *job) deleteDstEvent(r syncdb.Record) error {
+	log.Printf("delete event: %s\n", r.Src.EventID)
 	return ccommon.DeleteDstEvent(s.syncDB, s.dstService, r)
 }
 
@@ -198,4 +202,44 @@ func (s *job) mapRecurringEventId(srcEvent *calendar.Event) (string, error) {
 		return "", err
 	}
 	return r.Dst.EventID, nil
+}
+
+func (s *job) deleteRecurringEventInstance(srcEvent *calendar.Event) error {
+	log.Printf("skipping event: %s\n", srcEvent.Id)
+
+	recurringEventId, err := s.mapRecurringEventId(srcEvent)
+	if err != nil {
+		return errors.Wrap(err, "failed to map recurring event id")
+	}
+
+	// recurring event already deleted
+	if recurringEventId == "" {
+		return nil
+	}
+
+	start := srcEvent.OriginalStartTime.DateTime
+	if start == "" {
+		start = srcEvent.OriginalStartTime.Date
+	}
+
+	dstInstances, err := s.dstService.Events.
+		Instances(s.request.DstCalendarID, recurringEventId).
+		OriginalStart(start).
+		MaxResults(1).
+		Do()
+	if err != nil {
+		return err
+	}
+
+	if len(dstInstances.Items) == 0 {
+		return nil
+	}
+
+	dstEvent := dstInstances.Items[0]
+	if err := s.dstService.Events.Delete(s.request.DstCalendarID, dstEvent.Id).Do(); err != nil {
+		return errors.Wrapf(err, "failed to delete event")
+	}
+
+	log.Printf("deleted recurring event instance: %s\n", srcEvent.Id)
+	return nil
 }
