@@ -8,7 +8,7 @@ import (
 	"github.com/google/subcommands"
 	"github.com/pkg/errors"
 
-	"calendar/clients/calendar"
+	"github.com/robertdolca/calendar-sync/clients/calendar"
 )
 
 type clearCmd struct {

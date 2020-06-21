@@ -8,7 +8,7 @@ import (
 	goauth2 "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
 
-	"calendar/clients/tmanager"
+	"github.com/robertdolca/calendar-sync/clients/tmanager"
 )
 
 type Manager struct {

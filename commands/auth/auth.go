@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/subcommands"
 
-	"calendar/clients/tmanager"
+	"github.com/robertdolca/calendar-sync/clients/tmanager"
 )
 
 type auth struct {

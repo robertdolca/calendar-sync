@@ -9,10 +9,10 @@ import (
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 
-	"calendar/clients/calendar/ccommon"
-	"calendar/clients/syncdb"
-	"calendar/clients/tmanager"
-	"calendar/clients/userinfo"
+	"github.com/robertdolca/calendar-sync/clients/calendar/ccommon"
+	"github.com/robertdolca/calendar-sync/clients/syncdb"
+	"github.com/robertdolca/calendar-sync/clients/tmanager"
+	"github.com/robertdolca/calendar-sync/clients/userinfo"
 )
 
 

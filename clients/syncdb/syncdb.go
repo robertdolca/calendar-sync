@@ -7,7 +7,7 @@ import (
 	"github.com/nightlyone/lockfile"
 	"github.com/pkg/errors"
 
-	"calendar/clients/lockhelper"
+	"github.com/robertdolca/calendar-sync/clients/lockhelper"
 )
 
 var (
@@ -96,7 +96,6 @@ func (db *DB) ListDst(accountEmail, calendarID string) ([]Record, error) {
 	var result []Record
 
 	err := db.db.View(func(txn *badger.Txn) error {
-
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
 

@@ -9,7 +9,7 @@ import (
 	"github.com/google/subcommands"
 	"github.com/jedib0t/go-pretty/v6/table"
 
-	"calendar/clients/calendar"
+	"github.com/robertdolca/calendar-sync/clients/calendar"
 )
 
 type list struct {

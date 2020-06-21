@@ -9,14 +9,14 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 
-	"calendar/clients/calendar"
-	"calendar/clients/syncdb"
-	"calendar/clients/tmanager"
-	"calendar/clients/userinfo"
-	"calendar/commands/auth"
-	"calendar/commands/clear"
-	"calendar/commands/list"
-	synccmd "calendar/commands/sync"
+	"github.com/robertdolca/calendar-sync/clients/calendar"
+	"github.com/robertdolca/calendar-sync/clients/syncdb"
+	"github.com/robertdolca/calendar-sync/clients/tmanager"
+	"github.com/robertdolca/calendar-sync/clients/userinfo"
+	"github.com/robertdolca/calendar-sync/commands/auth"
+	"github.com/robertdolca/calendar-sync/commands/clear"
+	"github.com/robertdolca/calendar-sync/commands/list"
+	synccmd "github.com/robertdolca/calendar-sync/commands/sync"
 )
 
 func run() subcommands.ExitStatus {

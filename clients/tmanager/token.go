@@ -14,7 +14,7 @@ import (
 	"google.golang.org/api/calendar/v3"
 	goauth2 "google.golang.org/api/oauth2/v2"
 
-	"calendar/clients/lockhelper"
+	"github.com/robertdolca/calendar-sync/clients/lockhelper"
 )
 
 const (

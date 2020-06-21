@@ -9,8 +9,8 @@ import (
 	"github.com/google/subcommands"
 	"github.com/pkg/errors"
 
-	"calendar/clients/calendar"
-	"calendar/clients/calendar/sync"
+	"github.com/robertdolca/calendar-sync/clients/calendar"
+	"github.com/robertdolca/calendar-sync/clients/calendar/sync"
 )
 
 type syncCmd struct {
