@@ -14,6 +14,7 @@ import (
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
 	"calendar/commands/auth"
+	"calendar/commands/clear"
 	"calendar/commands/list"
 	synccmd "calendar/commands/sync"
 )
@@ -36,6 +37,7 @@ func setup() error {
 	subcommands.Register(auth.New(tm), "")
 	subcommands.Register(list.New(cm), "")
 	subcommands.Register(synccmd.New(cm), "")
+	subcommands.Register(clear.New(cm), "")
 	flag.Parse()
 
 	return nil
