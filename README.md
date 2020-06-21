@@ -6,10 +6,19 @@ It can also use a public or a private (shared) calendar as source as long as
 the source calendar is added to the Google account's secondary / subscribed
 calendars list.
 
+## Installation
+
+```bash
+go get github.com/robertdolca/calendar-sync
+```
+
+In order to use `calendar-sync` as a command the go bin folder (`~/go/bin`)
+needs to be added to the `PATH`.
+
 ## Authenticate accounts
 
 ```bash
-./calendar-sync auth
+calendar-sync auth
 ```
 
 This will print link that can be used to authorize access to a Google account.
@@ -20,7 +29,7 @@ Google accounts.
 ## List accounts and calendars
 
 ```bash
-./calendar-sync list
+calendar-sync list
 ```
 
 This will print a list of accounts that are authorized. For each account, a list
@@ -30,7 +39,7 @@ and calendars the account is subscribed to.
 ## Sync calendars
 
 ```bash
-./calendar-sync sync \
+calendar-sync sync \
   -src-account accountA@gmail.com \
   -src-calendar dj3snc3c \
   -dst-account accountB@custom-domain.com \
@@ -47,7 +56,7 @@ within the last 2 hours.
 ## Delete synced events
 
 ```bash
-./calendar-sync clear \
+calendar-sync clear \
   -account accountA@gmail.com \
   -calendar dj3snc3c
 ```
