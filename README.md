@@ -45,17 +45,18 @@ within the last 2 hours.
 ### Google API app credentials
 
 The CLI tool requires a Google API app that it will be used in the OAuth 2 flow.
-To create an app go to https://console.developers.google.com/.
+To create an app go to [Developer Console](https://console.developers.google.com/).
 
-Within the Google API app you need to create a OAuth 2.0 Client ID at
-https://console.developers.google.com/apis/credentials. The application type
-that should be selected is `Desktop app`.
+Within the Google API app you need to create a
+[OAuth 2.0 Client ID](https://console.developers.google.com/apis/credentials).
+The application type that should be selected is `Desktop app`.
 
 Once the OAuth 2.0 Client ID is created the JSON credentials file should be
 downloaded and placed next to the binary under the name `credentials.json`.
 
-The Google Calendar API needs to be enabled for the Google API app at
-https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview.
+The Google Calendar API needs to be
+[enabled](https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview)
+for the Google API app at.
 
 ### Local database
 
