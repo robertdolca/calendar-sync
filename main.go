@@ -19,16 +19,24 @@ import (
 	synccmd "calendar/commands/sync"
 )
 
-func setup() error {
+func run() subcommands.ExitStatus {
 	tm, err := tmanager.New()
 	if err != nil {
-		return errors.Wrap(err, "failed to create token manager")
+		fmt.Println(errors.Wrap(err, "failed to create token manager"))
+		return subcommands.ExitFailure
 	}
 
 	sdb, err := syncdb.New()
 	if err != nil {
-		return errors.Wrap(err, "failed to create sync records database")
+		fmt.Println(errors.Wrap(err, "failed to create sync records database"))
+		return subcommands.ExitFailure
 	}
+	defer func() {
+		err := sdb.Close()
+		if err != nil {
+			fmt.Println(errors.Wrap(err, "failed to close db connection"))
+		}
+	}()
 
 	ui := userinfo.New(tm)
 	cm := calendar.New(tm, ui, sdb)
@@ -40,13 +48,9 @@ func setup() error {
 	subcommands.Register(clear.New(cm), "")
 	flag.Parse()
 
-	return nil
+	return subcommands.Execute(context.Background())
 }
 
 func main() {
-	if err := setup(); err != nil {
-		fmt.Println(err)
-		os.Exit(int(subcommands.ExitFailure))
-	}
-	os.Exit(int(subcommands.Execute(context.Background())))
+	os.Exit(int(run()))
 }
