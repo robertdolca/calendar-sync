@@ -12,7 +12,7 @@ import (
 	"calendar/clients/calendar"
 )
 
-type authListCmd struct {
+type sync struct {
 	sync *calendar.Manager
 	srcAccount string
 	srcCalendar string
@@ -21,25 +21,25 @@ type authListCmd struct {
 	syncInterval time.Duration
 }
 
-func New(sync *calendar.Manager) subcommands.Command  {
-	return &authListCmd{
-		sync: sync,
+func New(syncManager *calendar.Manager) subcommands.Command  {
+	return &sync{
+		sync: syncManager,
 	}
 }
 
-func (*authListCmd) Name() string {
+func (*sync) Name() string {
 	return "sync"
 }
 
-func (*authListCmd) Synopsis() string {
+func (*sync) Synopsis() string {
 	return "Copies all events from the source calendar to the destination calendar"
 }
 
-func (*authListCmd) Usage() string {
+func (*sync) Usage() string {
 	return "calendar sync\n"
 }
 
-func (p *authListCmd) SetFlags(f *flag.FlagSet) {
+func (p *sync) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.srcAccount, "src-account", "", "Source account email address")
 	f.StringVar(&p.srcCalendar, "src-calendar", "", "Source calendar id")
 	f.StringVar(&p.dstAccount, "dst-account", "", "Destination account email address")
@@ -47,7 +47,7 @@ func (p *authListCmd) SetFlags(f *flag.FlagSet) {
 	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
 }
 
-func (p *authListCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *sync) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if err := p.validateInput(); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitUsageError
@@ -61,7 +61,7 @@ func (p *authListCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 	return subcommands.ExitSuccess
 }
 
-func (p *authListCmd) validateInput() error {
+func (p *sync) validateInput() error {
 	if p.srcAccount == "" {
 		return errors.New("source account email not specified")
 	}

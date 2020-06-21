@@ -12,31 +12,31 @@ import (
 	"calendar/clients/calendar"
 )
 
-type authListCmd struct {
+type list struct {
 	calendarManager *calendar.Manager
 }
 
 func New(calendarManager *calendar.Manager) subcommands.Command  {
-	return &authListCmd{
+	return &list{
 		calendarManager: calendarManager,
 	}
 }
 
-func (*authListCmd) Name() string {
+func (*list) Name() string {
 	return "list"
 }
 
-func (*authListCmd) Synopsis() string {
+func (*list) Synopsis() string {
 	return "List authenticated accounts and the calendars they have access to"
 }
 
-func (*authListCmd) Usage() string {
+func (*list) Usage() string {
 	return ``
 }
 
-func (p *authListCmd) SetFlags(*flag.FlagSet) {}
+func (p *list) SetFlags(*flag.FlagSet) {}
 
-func (p *authListCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *list) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	usersCalendars, err := p.calendarManager.UsersCalendars(ctx)
 	if err != nil {
 		fmt.Println(err)

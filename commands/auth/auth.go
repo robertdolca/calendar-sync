@@ -10,31 +10,31 @@ import (
 	"calendar/clients/tmanager"
 )
 
-type authAddCmd struct {
+type auth struct {
 	tokenManager *tmanager.Manager
 }
 
 func New(tokenManager *tmanager.Manager) subcommands.Command  {
-	return &authAddCmd{
+	return &auth{
 		tokenManager: tokenManager,
 	}
 }
 
-func (*authAddCmd) Name() string {
+func (*auth) Name() string {
 	return "auth"
 }
 
-func (*authAddCmd) Synopsis() string {
+func (*auth) Synopsis() string {
 	return "Authenticated a new account"
 }
 
-func (*authAddCmd) Usage() string {
+func (*auth) Usage() string {
 	return ``
 }
 
-func (a *authAddCmd) SetFlags(*flag.FlagSet) {}
+func (a *auth) SetFlags(*flag.FlagSet) {}
 
-func (a *authAddCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (a *auth) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if err := a.tokenManager.Auth(ctx); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
