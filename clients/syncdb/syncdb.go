@@ -49,7 +49,7 @@ func New() (*DB, error) {
 
 func (db *DB) Insert(r Record) error {
 	return db.db.Update(func(txn *badger.Txn) error {
-		key := buildKey(r.Src)
+		key := buildKeyRecord(r)
 
 		value, err := json.Marshal(r)
 		if err != nil {
@@ -63,11 +63,11 @@ func (db *DB) Insert(r Record) error {
 	})
 }
 
-func (db *DB) Find(e Event) (Record, error) {
+func (db *DB) Find(e Event, dstAccountEmail, dstCalendarID string) (Record, error) {
 	var r Record
 
 	err := db.db.View(func(txn *badger.Txn) error {
-		key := buildKey(e)
+		key := buildKey(e, dstAccountEmail, dstCalendarID)
 
 		item, err := txn.Get(key)
 		if err == badger.ErrKeyNotFound {
@@ -125,9 +125,9 @@ func (db *DB) ListDst(accountEmail, calendarID string) ([]Record, error) {
 	return result, err
 }
 
-func (db *DB) Delete(e Event) error {
+func (db *DB) Delete(r Record) error {
 	return db.db.Update(func(txn *badger.Txn) error {
-		if err := txn.Delete(buildKey(e)); err != nil {
+		if err := txn.Delete(buildKeyRecord(r)); err != nil {
 			return errors.Wrapf(err, "failed to delete")
 		}
 		return nil
@@ -138,6 +138,14 @@ func (db *DB) Close() error {
 	return db.db.Close()
 }
 
-func buildKey(event Event) []byte {
-	return []byte(event.AccountEmail + event.CalendarId + event.Id)
+func buildKey(event Event, dstAccountEmail, dstCalendarId string) []byte {
+	return []byte(
+		event.AccountEmail + event.CalendarId +
+		dstAccountEmail + dstCalendarId +
+		event.Id,
+	)
+}
+
+func buildKeyRecord(r Record) []byte {
+	return buildKey(r.Src, r.Dst.AccountEmail, r.Dst.CalendarId)
 }
