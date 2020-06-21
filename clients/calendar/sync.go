@@ -2,14 +2,24 @@ package calendar
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"log"
 
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
+
+	"calendar/clients/syncdb"
 )
+
+const (
+	eventStatusCancelled = "cancelled"
+)
+
+type syncMetadata struct {
+	srcCalendar, dstCalendar string
+	srcAccount, dstAccount string
+}
 
 func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount, dstCalendar string) error {
 	calendarTokens, err := s.usersCalendarsTokens(ctx)
@@ -27,10 +37,15 @@ func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount,
 		return errors.New("source account not authenticated")
 	}
 
-	return s.sync(ctx, srcToken, dstToken, srcCalendar, dstCalendar)
+	return s.sync(ctx, srcToken, dstToken, syncMetadata{
+		srcCalendar: srcCalendar,
+		dstCalendar: dstCalendar,
+		srcAccount:  srcAccount,
+		dstAccount:  dstAccount,
+	})
 }
 
-func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, srcCalendar, dstCalendar string) error {
+func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, syncMetadata syncMetadata) error {
 	config := s.tokenManager.Config()
 
 	srcService, err := calendar.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, srcToken)))
@@ -44,10 +59,10 @@ func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, sr
 	}
 
 	err = srcService.Events.
-		List(srcCalendar).
+		List(syncMetadata.srcCalendar).
 		UpdatedMin(updateInterval).
 		Pages(ctx, func(events *calendar.Events) error {
-			return s.syncEvents(dstService, dstCalendar, events)
+			return s.syncEvents(dstService, syncMetadata, events)
 		})
 
 	if err != nil {
@@ -57,23 +72,98 @@ func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, sr
 	return nil
 }
 
-func (s *Manager) syncEvents(dstService *calendar.Service, dstCalendar string, events *calendar.Events) error {
-	for _, event := range events.Items {
-		if event.Status == "cancelled" {
-
-		} else {
-			_, err := dstService.Events.Insert(dstCalendar, mapEvent(event)).Do()
-			if err != nil {
-				prettyPrint(event)
-				return err
-			}
-			println(".")
+func (s *Manager) syncEvents(dstService *calendar.Service, syncMetadata syncMetadata, events *calendar.Events) error {
+	for _, srcEvent := range events.Items {
+		if err := s.syncEvent(dstService, syncMetadata, srcEvent); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func prettyPrint(i interface{}) {
-	s, _ := json.MarshalIndent(i, "", "\t")
-	fmt.Println(string(s))
+
+func (s *Manager) syncEvent(dstService *calendar.Service, syncMetadata syncMetadata, srcEvent *calendar.Event) error {
+	r, err := s.syncDB.Find(syncdb.Event{
+		Id:           srcEvent.Id,
+		AccountEmail: syncMetadata.srcAccount,
+		CalendarId:   syncMetadata.srcCalendar,
+	})
+	if err == syncdb.ErrNotFound {
+		if srcEvent.Status == eventStatusCancelled {
+			return nil
+		}
+		return s.createEvent(dstService, syncMetadata, srcEvent)
+	}
+	if err != nil {
+		return err
+	}
+	return s.syncExistingEvent(dstService, syncMetadata, srcEvent, r)
+}
+
+func (s *Manager) createEvent(dstService *calendar.Service, syncMetadata syncMetadata, srcEvent *calendar.Event) error {
+	log.Printf("create event")
+
+	dstEvent, err := dstService.Events.Insert(syncMetadata.dstCalendar, mapEvent(srcEvent)).Do()
+	if err != nil {
+		return errors.Wrapf(err, "failed to create event")
+	}
+
+	record := syncdb.Record{
+		Src: syncdb.Event{
+			Id:           srcEvent.Id,
+			AccountEmail: syncMetadata.srcAccount,
+			CalendarId:   syncMetadata.srcCalendar,
+		},
+		Dst: syncdb.Event{
+			Id:           dstEvent.Id,
+			AccountEmail: syncMetadata.dstAccount,
+			CalendarId:   syncMetadata.dstCalendar,
+		},
+	}
+
+	if err = s.syncDB.Insert(record); err != nil {
+		return errors.Wrapf(err, "failed to save sync mapping")
+	}
+	return nil
+}
+
+func (s *Manager) syncExistingEvent(
+	dstService *calendar.Service,
+	syncMetadata syncMetadata,
+	srcEvent *calendar.Event,
+	r syncdb.Record,
+) error {
+	log.Println("existing event")
+
+	if srcEvent.Status == "cancelled" {
+		return s.deleteExistingEvent(dstService, syncMetadata, r)
+	}
+	_, err := dstService.Events.Update(syncMetadata.dstCalendar, r.Dst.Id, mapEvent(srcEvent)).Do()
+	if err != nil {
+		return errors.Wrapf(err, "failed to update event")
+	}
+	return nil
+}
+
+func (s *Manager) deleteExistingEvent(
+	dstService *calendar.Service,
+	syncMetadata syncMetadata,
+	r syncdb.Record,
+) error {
+	log.Println("delete event")
+
+	dstEvent, err := dstService.Events.Get(syncMetadata.dstCalendar, r.Dst.Id).Do()
+	if err != nil {
+		return errors.Wrapf(err, "failed to get event before deletion")
+	}
+
+	if dstEvent.Status == eventStatusCancelled {
+		log.Println("event already deleted")
+		return s.syncDB.Delete(r.Src)
+	}
+
+	if err := dstService.Events.Delete(syncMetadata.dstCalendar, r.Dst.Id).Do(); err != nil {
+		return errors.Wrapf(err, "failed to delete event")
+	}
+	return s.syncDB.Delete(r.Src)
 }

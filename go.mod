@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	cloud.google.com/go v0.58.0 // indirect
+	github.com/dgraph-io/badger/v2 v2.0.3
 	github.com/google/subcommands v1.2.0
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/jedib0t/go-pretty/v6 v6.0.4

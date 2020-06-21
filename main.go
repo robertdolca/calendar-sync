@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"calendar/clients/calendar"
+	"calendar/clients/syncdb"
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
 	"calendar/commands/auth"
@@ -23,8 +24,13 @@ func setup() error {
 		return errors.Wrap(err, "failed to create token manager")
 	}
 
+	sdb, err := syncdb.New()
+	if err != nil {
+		return errors.Wrap(err, "failed to create sync records database")
+	}
+
 	ui := userinfo.New(tm)
-	cm := calendar.New(tm, ui)
+	cm := calendar.New(tm, ui, sdb)
 
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(auth.New(tm), "")

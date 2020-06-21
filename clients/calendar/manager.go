@@ -9,6 +9,7 @@ import (
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 
+	"calendar/clients/syncdb"
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
 )
@@ -26,6 +27,7 @@ type Into struct {
 type Manager struct {
 	tokenManager *tmanager.Manager
 	userInfo *userinfo.Manager
+	syncDB *syncdb.DB
 }
 
 type UserCalendars struct {
@@ -39,10 +41,11 @@ type TokenCalendars struct {
 	Token oauth2.Token
 }
 
-func New(tokenManager *tmanager.Manager, userInfo *userinfo.Manager) *Manager {
+func New(tokenManager *tmanager.Manager, userInfo *userinfo.Manager, syncDB *syncdb.DB) *Manager {
 	return &Manager{
 		tokenManager: tokenManager,
 		userInfo: userInfo,
+		syncDB: syncDB,
 	}
 }
 

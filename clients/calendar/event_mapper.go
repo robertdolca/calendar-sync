@@ -18,7 +18,6 @@ func mapEvent(event *calendar.Event) *calendar.Event  {
 		Location: event.Location,
 		OriginalStartTime: mapEventDateTime(event.OriginalStartTime),
 		Recurrence: event.Recurrence,
-		Sequence: event.Sequence,
 		Start: mapEventDateTime(event.Start),
 		Status: event.Status,
 		Summary: event.Summary,

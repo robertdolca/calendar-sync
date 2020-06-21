@@ -1,3 +1,4 @@
+sync.db/
 *.lock
 .idea
 *.iml
