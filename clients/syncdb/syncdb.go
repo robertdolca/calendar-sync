@@ -20,14 +20,14 @@ type DB struct {
 }
 
 type Record struct {
-	Src Event
-	Dst Event
+	Src Event `json:"src"`
+	Dst Event `json:"dst"`
 }
 
 type Event struct {
-	EventID      string
-	AccountEmail string
-	CalendarID   string
+	EventID      string `json:"eventId"`
+	AccountEmail string `json:"accountEmail"`
+	CalendarID   string `json:"calendarId"`
 }
 
 func New() (*DB, error) {
