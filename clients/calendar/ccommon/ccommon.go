@@ -2,7 +2,6 @@ package ccommon
 
 import (
 	"context"
-	"log"
 
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -102,21 +101,17 @@ func calendars(ctx context.Context, config *oauth2.Config, token *oauth2.Token) 
 
 
 func DeleteDstEvent(syncDB *syncdb.DB, dstService *calendar.Service, r syncdb.Record) error {
-	log.Printf("delete event: %s\n", r.Dst.EventID)
-
 	dstEvent, err := dstService.Events.Get(r.Dst.CalendarID, r.Dst.EventID).Do()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get event before deletion")
 	}
 
 	if dstEvent.Status == EventStatusCancelled {
-		log.Printf("event already deleted: %s\n", dstEvent.Id)
 		return syncDB.Delete(r)
 	}
 
 	if err := dstService.Events.Delete(r.Dst.CalendarID, r.Dst.EventID).Do(); err != nil {
 		return errors.Wrapf(err, "failed to delete event")
 	}
-	log.Printf("deleted event: %s\n", dstEvent.Id)
 	return syncDB.Delete(r)
 }
