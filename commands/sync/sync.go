@@ -10,9 +10,10 @@ import (
 	"github.com/pkg/errors"
 
 	"calendar/clients/calendar"
+	"calendar/clients/calendar/sync"
 )
 
-type sync struct {
+type syncCmd struct {
 	sync            *calendar.Manager
 	srcAccountEmail string
 	srcCalendarID   string
@@ -22,24 +23,24 @@ type sync struct {
 }
 
 func New(syncManager *calendar.Manager) subcommands.Command  {
-	return &sync{
+	return &syncCmd{
 		sync: syncManager,
 	}
 }
 
-func (*sync) Name() string {
+func (*syncCmd) Name() string {
 	return "sync"
 }
 
-func (*sync) Synopsis() string {
+func (*syncCmd) Synopsis() string {
 	return "Copies all events from the source calendar to the destination calendar"
 }
 
-func (*sync) Usage() string {
+func (*syncCmd) Usage() string {
 	return "calendar sync\n"
 }
 
-func (p *sync) SetFlags(f *flag.FlagSet) {
+func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.srcAccountEmail, "src-account", "", "Source account email address")
 	f.StringVar(&p.srcCalendarID, "src-calendar", "", "Source calendar id")
 	f.StringVar(&p.dstAccountEmail, "dst-account", "", "Destination account email address")
@@ -47,13 +48,21 @@ func (p *sync) SetFlags(f *flag.FlagSet) {
 	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
 }
 
-func (p *sync) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if err := p.validateInput(); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitUsageError
 	}
 
-	if err := p.sync.Sync(ctx, p.srcAccountEmail, p.srcCalendarID, p.dstAccountEmail, p.dstCalendarID, p.syncInterval); err != nil {
+	request := sync.Request{
+		SrcAccountEmail: p.srcAccountEmail,
+		SrcCalendarID:   p.srcCalendarID,
+		DstAccountEmail: p.dstAccountEmail,
+		DstCalendarID:   p.dstCalendarID,
+		SyncInterval:    p.syncInterval,
+	}
+
+	if err := p.sync.Sync(ctx, request); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}
@@ -61,7 +70,7 @@ func (p *sync) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) s
 	return subcommands.ExitSuccess
 }
 
-func (p *sync) validateInput() error {
+func (p *syncCmd) validateInput() error {
 	if p.srcAccountEmail == "" {
 		return errors.New("source account email not specified")
 	}

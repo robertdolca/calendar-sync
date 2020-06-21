@@ -1,4 +1,4 @@
-package calendar
+package sync
 
 import (
 	"google.golang.org/api/calendar/v3"

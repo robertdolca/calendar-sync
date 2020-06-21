@@ -4,20 +4,15 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 
+	"calendar/clients/calendar/ccommon"
+	"calendar/clients/calendar/sync"
 	"calendar/clients/syncdb"
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
 )
-
-type Into struct {
-	Summary string
-	Id string
-	Deleted bool
-}
 
 type Manager struct {
 	tokenManager *tmanager.Manager
@@ -27,13 +22,7 @@ type Manager struct {
 
 type UserCalendars struct {
 	Email string
-	Calendars []Into
-}
-
-type TokenCalendars struct {
-	Email string
-	Calendars []Into
-	Token oauth2.Token
+	Calendars []ccommon.CalendarInfo
 }
 
 func New(tokenManager *tmanager.Manager, userInfo *userinfo.Manager, syncDB *syncdb.DB) *Manager {
@@ -45,7 +34,7 @@ func New(tokenManager *tmanager.Manager, userInfo *userinfo.Manager, syncDB *syn
 }
 
 func (s *Manager) UsersCalendars(ctx context.Context) ([]UserCalendars, error) {
-	calendarTokens, err := s.usersCalendarsTokens(ctx)
+	calendarTokens, err := ccommon.UsersCalendarsTokens(ctx, s.userInfo, s.tokenManager)
 	if err != nil {
 		return nil, err
 	}
@@ -61,67 +50,39 @@ func (s *Manager) UsersCalendars(ctx context.Context) ([]UserCalendars, error) {
 	return result, nil
 }
 
-func (s *Manager) usersCalendarsTokens(ctx context.Context) ([]TokenCalendars, error) {
-	tokens := s.tokenManager.List()
 
-	result := make([]TokenCalendars, 0, len(tokens))
-	for _, token := range tokens {
-		email, err := s.userInfo.Email(ctx, &token)
-		if err != nil {
-			return nil, err
-		}
-
-		calendars, err := s.calendars(ctx, &token)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, TokenCalendars{
-			Email: email,
-			Calendars: calendars,
-			Token: token,
-		})
-	}
-
-	return result, nil
-}
-
-func (s *Manager) calendars(ctx context.Context, token *oauth2.Token) ([]Into, error) {
-	srv, err := calendar.NewService(ctx, option.WithTokenSource(s.tokenManager.Config().TokenSource(ctx, token)))
+func (s *Manager) Clear(ctx context.Context, accountEmail, calendarID string) error {
+	calendarTokens, err := ccommon.UsersCalendarsTokens(ctx, s.userInfo, s.tokenManager)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to create calendar client")
+		return err
 	}
 
-	calendarList, err := srv.CalendarList.List().Do()
+	token := ccommon.FindToken(calendarTokens, accountEmail)
+	if token == nil {
+		return errors.New("source account not authenticated")
+	}
+
+	config := s.tokenManager.Config()
+	service, err := calendar.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, token)))
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to get calendar list")
+		return errors.Wrap(err, "unable to create calendar client")
 	}
 
-	var calendars []Into
-	for _, entry := range calendarList.Items {
-		calendars = append(calendars, calendarListEntryToCalendar(entry))
+
+	records, err := s.syncDB.ListDst(accountEmail, calendarID)
+	if err != nil {
+		return errors.New("failed to list records")
 	}
 
-	return calendars, nil
-}
-
-func calendarListEntryToCalendar(entry *calendar.CalendarListEntry) Into {
-	summary := entry.SummaryOverride
-	if summary == "" {
-		summary = entry.Summary
-	}
-	return Into{
-		Summary: summary,
-		Id: entry.Id,
-		Deleted: entry.Deleted,
-	}
-}
-
-func findToken(tokensEmail []TokenCalendars, email string) *oauth2.Token {
-	for _, tokeEmail := range tokensEmail {
-		if tokeEmail.Email == email {
-			return &tokeEmail.Token
+	for _, record := range records {
+		if err := ccommon.DeleteDstEvent(s.syncDB, service, record); err != nil {
+			return err
 		}
 	}
+
 	return nil
+}
+
+func (s *Manager) Sync(ctx context.Context, request sync.Request) error {
+	return sync.RunSync(ctx, s.syncDB, s.tokenManager, s.userInfo, request)
 }
