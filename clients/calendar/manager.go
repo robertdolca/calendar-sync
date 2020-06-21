@@ -2,7 +2,6 @@ package calendar
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -12,10 +11,6 @@ import (
 	"calendar/clients/syncdb"
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
-)
-
-var (
-	updateInterval = time.Now().AddDate(0, 0, -25).Format(time.RFC3339)
 )
 
 type Into struct {

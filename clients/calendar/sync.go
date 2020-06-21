@@ -3,6 +3,7 @@ package calendar
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -21,7 +22,12 @@ type syncMetadata struct {
 	srcAccount, dstAccount string
 }
 
-func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount, dstCalendar string) error {
+func (s *Manager) Sync(
+	ctx context.Context,
+	srcAccount, srcCalendar,
+	dstAccount, dstCalendar string,
+	syncInterval time.Duration,
+) error {
 	calendarTokens, err := s.usersCalendarsTokens(ctx)
 	if err != nil {
 		return err
@@ -37,7 +43,7 @@ func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount,
 		return errors.New("source account not authenticated")
 	}
 
-	return s.sync(ctx, srcToken, dstToken, syncMetadata{
+	return s.sync(ctx, srcToken, dstToken, syncInterval, syncMetadata{
 		srcCalendar: srcCalendar,
 		dstCalendar: dstCalendar,
 		srcAccount:  srcAccount,
@@ -45,7 +51,12 @@ func (s *Manager) Sync(ctx context.Context, srcAccount, srcCalendar, dstAccount,
 	})
 }
 
-func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, syncMetadata syncMetadata) error {
+func (s *Manager) sync(
+	ctx context.Context,
+	srcToken, dstToken *oauth2.Token,
+	syncInterval time.Duration,
+	syncMetadata syncMetadata,
+) error {
 	config := s.tokenManager.Config()
 
 	srcService, err := calendar.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, srcToken)))
@@ -60,7 +71,7 @@ func (s *Manager) sync(ctx context.Context, srcToken, dstToken *oauth2.Token, sy
 
 	err = srcService.Events.
 		List(syncMetadata.srcCalendar).
-		UpdatedMin(updateInterval).
+		UpdatedMin(time.Now().Add(-syncInterval).Format(time.RFC3339)).
 		Pages(ctx, func(events *calendar.Events) error {
 			return s.syncEvents(dstService, syncMetadata, events)
 		})

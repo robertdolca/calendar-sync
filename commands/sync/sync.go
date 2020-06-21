@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/google/subcommands"
 	"github.com/pkg/errors"
@@ -17,6 +18,7 @@ type authListCmd struct {
 	srcCalendar string
 	dstAccount string
 	dstCalendar string
+	syncInterval time.Duration
 }
 
 func New(sync *calendar.Manager) subcommands.Command  {
@@ -42,6 +44,7 @@ func (p *authListCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.srcCalendar, "src-calendar", "", "Source calendar id")
 	f.StringVar(&p.dstAccount, "dst-account", "", "Destination account email address")
 	f.StringVar(&p.dstCalendar, "dst-calendar", "", "Destination calendar id")
+	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
 }
 
 func (p *authListCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -50,7 +53,7 @@ func (p *authListCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfa
 		return subcommands.ExitUsageError
 	}
 
-	if err := p.sync.Sync(ctx, p.srcAccount, p.srcCalendar, p.dstAccount, p.dstCalendar); err != nil {
+	if err := p.sync.Sync(ctx, p.srcAccount, p.srcCalendar, p.dstAccount, p.dstCalendar, p.syncInterval); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}

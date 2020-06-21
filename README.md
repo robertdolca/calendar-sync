@@ -30,14 +30,15 @@ and calendars the account is subscribed to.
   -src-account accountA@gmail.com \
   -src-calendar dj3snc3c \
   -dst-account accountB@custom-domain.com \
-  -dst-calendar jab1rgf
+  -dst-calendar jab1rgf \
+  -interval 2h
 ```
 
 This will create events on the destination calendar if they are not already
 there. If a corresponding event exists it will be updated if necessary.
 
 The sync action looks at events created or updated on the source calendar
-within the last 25 days.
+within the last 2 hours.
 
 ## Internals
 
