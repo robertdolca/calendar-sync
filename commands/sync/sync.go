@@ -1,11 +1,13 @@
 package sync
 
 import (
-	"calendar/clients/calendar"
 	"context"
 	"flag"
 	"fmt"
+
 	"github.com/google/subcommands"
+
+	"calendar/clients/calendar"
 )
 
 type authListCmd struct {

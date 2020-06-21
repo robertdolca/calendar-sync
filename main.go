@@ -1,18 +1,20 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+	"os"
+
+	"github.com/google/subcommands"
+	"github.com/pkg/errors"
+	"golang.org/x/net/context"
+
 	"calendar/clients/calendar"
 	"calendar/clients/tmanager"
 	"calendar/clients/userinfo"
 	"calendar/commands/auth"
 	"calendar/commands/list"
 	synccmd "calendar/commands/sync"
-	"flag"
-	"fmt"
-	"github.com/google/subcommands"
-	"github.com/pkg/errors"
-	"golang.org/x/net/context"
-	"os"
 )
 
 func setup() error {

@@ -1,11 +1,13 @@
 package auth
 
 import (
-	"calendar/clients/tmanager"
 	"context"
 	"flag"
 	"fmt"
+
 	"github.com/google/subcommands"
+
+	"calendar/clients/tmanager"
 )
 
 type authAddCmd struct {

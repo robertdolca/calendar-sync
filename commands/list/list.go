@@ -1,13 +1,15 @@
 package list
 
 import (
-	"calendar/clients/calendar"
 	"context"
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/google/subcommands"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"os"
+
+	"calendar/clients/calendar"
 )
 
 type authListCmd struct {

@@ -1,12 +1,14 @@
 package userinfo
 
 import (
-	"calendar/clients/tmanager"
 	"context"
+
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	goauth2 "google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
+
+	"calendar/clients/tmanager"
 )
 
 type Manager struct {
