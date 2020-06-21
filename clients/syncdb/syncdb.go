@@ -25,9 +25,9 @@ type Record struct {
 }
 
 type Event struct {
-	Id string
+	EventID      string
 	AccountEmail string
-	CalendarId string
+	CalendarID   string
 }
 
 func New() (*DB, error) {
@@ -113,7 +113,7 @@ func (db *DB) ListDst(accountEmail, calendarID string) ([]Record, error) {
 				return errors.Wrap(err, "failed to serialize record")
 			}
 
-			if record.Dst.CalendarId != calendarID || record.Dst.AccountEmail != accountEmail {
+			if record.Dst.CalendarID != calendarID || record.Dst.AccountEmail != accountEmail {
 				continue
 			}
 
@@ -140,12 +140,12 @@ func (db *DB) Close() error {
 
 func buildKey(event Event, dstAccountEmail, dstCalendarId string) []byte {
 	return []byte(
-		event.AccountEmail + event.CalendarId +
+		event.AccountEmail + event.CalendarID +
 		dstAccountEmail + dstCalendarId +
-		event.Id,
+		event.EventID,
 	)
 }
 
 func buildKeyRecord(r Record) []byte {
-	return buildKey(r.Src, r.Dst.AccountEmail, r.Dst.CalendarId)
+	return buildKey(r.Src, r.Dst.AccountEmail, r.Dst.CalendarID)
 }

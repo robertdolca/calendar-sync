@@ -18,14 +18,14 @@ const (
 )
 
 type syncMetadata struct {
-	srcCalendar, dstCalendar string
-	srcAccount, dstAccount string
+	srcCalendarID, dstCalendarID     string
+	srcAccountEmail, dstAccountEmail string
 }
 
 func (s *Manager) Sync(
 	ctx context.Context,
-	srcAccount, srcCalendar,
-	dstAccount, dstCalendar string,
+	srcAccountEmail, srcCalendarID,
+	dstAccountEmail, dstCalendarID string,
 	syncInterval time.Duration,
 ) error {
 	calendarTokens, err := s.usersCalendarsTokens(ctx)
@@ -33,21 +33,21 @@ func (s *Manager) Sync(
 		return err
 	}
 
-	srcToken := findToken(calendarTokens, srcAccount)
+	srcToken := findToken(calendarTokens, srcAccountEmail)
 	if srcToken == nil {
 		return errors.New("source account not authenticated")
 	}
 
-	dstToken := findToken(calendarTokens, dstAccount)
+	dstToken := findToken(calendarTokens, dstAccountEmail)
 	if dstToken == nil {
 		return errors.New("source account not authenticated")
 	}
 
 	return s.sync(ctx, srcToken, dstToken, syncInterval, syncMetadata{
-		srcCalendar: srcCalendar,
-		dstCalendar: dstCalendar,
-		srcAccount:  srcAccount,
-		dstAccount:  dstAccount,
+		srcCalendarID:   srcCalendarID,
+		dstCalendarID:   dstCalendarID,
+		srcAccountEmail: srcAccountEmail,
+		dstAccountEmail: dstAccountEmail,
 	})
 }
 
@@ -70,7 +70,7 @@ func (s *Manager) sync(
 	}
 
 	err = srcService.Events.
-		List(syncMetadata.srcCalendar).
+		List(syncMetadata.srcCalendarID).
 		UpdatedMin(time.Now().Add(-syncInterval).Format(time.RFC3339)).
 		Pages(ctx, func(events *calendar.Events) error {
 			return s.syncEvents(dstService, syncMetadata, events)
@@ -95,10 +95,10 @@ func (s *Manager) syncEvents(dstService *calendar.Service, syncMetadata syncMeta
 
 func (s *Manager) syncEvent(dstService *calendar.Service, syncMetadata syncMetadata, srcEvent *calendar.Event) error {
 	r, err := s.syncDB.Find(syncdb.Event{
-		Id:           srcEvent.Id,
-		AccountEmail: syncMetadata.srcAccount,
-		CalendarId:   syncMetadata.srcCalendar,
-	}, syncMetadata.dstAccount, syncMetadata.dstCalendar)
+		EventID:      srcEvent.Id,
+		AccountEmail: syncMetadata.srcAccountEmail,
+		CalendarID:   syncMetadata.srcCalendarID,
+	}, syncMetadata.dstAccountEmail, syncMetadata.dstCalendarID)
 	if err == syncdb.ErrNotFound {
 		if srcEvent.Status == eventStatusCancelled {
 			return nil
@@ -122,21 +122,21 @@ func (s *Manager) createEvent(dstService *calendar.Service, syncMetadata syncMet
 	dstEvent := mapEvent(srcEvent)
 	dstEvent.RecurringEventId = recurringEventId
 
-	dstEvent, err = dstService.Events.Insert(syncMetadata.dstCalendar, dstEvent).Do()
+	dstEvent, err = dstService.Events.Insert(syncMetadata.dstCalendarID, dstEvent).Do()
 	if err != nil {
 		return errors.Wrapf(err, "failed to create event")
 	}
 
 	record := syncdb.Record{
 		Src: syncdb.Event{
-			Id:           srcEvent.Id,
-			AccountEmail: syncMetadata.srcAccount,
-			CalendarId:   syncMetadata.srcCalendar,
+			EventID:      srcEvent.Id,
+			AccountEmail: syncMetadata.srcAccountEmail,
+			CalendarID:   syncMetadata.srcCalendarID,
 		},
 		Dst: syncdb.Event{
-			Id:           dstEvent.Id,
-			AccountEmail: syncMetadata.dstAccount,
-			CalendarId:   syncMetadata.dstCalendar,
+			EventID:      dstEvent.Id,
+			AccountEmail: syncMetadata.dstAccountEmail,
+			CalendarID:   syncMetadata.dstCalendarID,
 		},
 	}
 
@@ -152,7 +152,7 @@ func (s *Manager) syncExistingEvent(
 	srcEvent *calendar.Event,
 	r syncdb.Record,
 ) error {
-	log.Printf("existing event: %s\n", r.Dst.Id)
+	log.Printf("existing event: %s\n", r.Dst.EventID)
 
 	if srcEvent.Status == "cancelled" {
 		return s.deleteExistingEvent(dstService, r)
@@ -166,7 +166,7 @@ func (s *Manager) syncExistingEvent(
 	dstEvent := mapEvent(srcEvent)
 	dstEvent.RecurringEventId = recurringEventId
 
-	if dstEvent, err = dstService.Events.Update(syncMetadata.dstCalendar, r.Dst.Id, dstEvent).Do(); err != nil {
+	if dstEvent, err = dstService.Events.Update(syncMetadata.dstCalendarID, r.Dst.EventID, dstEvent).Do(); err != nil {
 		return errors.Wrapf(err, "failed to update event")
 	}
 
@@ -175,9 +175,9 @@ func (s *Manager) syncExistingEvent(
 }
 
 func (s *Manager) deleteExistingEvent(service *calendar.Service, r syncdb.Record) error {
-	log.Printf("delete event: %s\n", r.Dst.Id)
+	log.Printf("delete event: %s\n", r.Dst.EventID)
 
-	dstEvent, err := service.Events.Get(r.Dst.CalendarId, r.Dst.Id).Do()
+	dstEvent, err := service.Events.Get(r.Dst.CalendarID, r.Dst.EventID).Do()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get event before deletion")
 	}
@@ -187,7 +187,7 @@ func (s *Manager) deleteExistingEvent(service *calendar.Service, r syncdb.Record
 		return s.syncDB.Delete(r)
 	}
 
-	if err := service.Events.Delete(r.Dst.CalendarId, r.Dst.Id).Do(); err != nil {
+	if err := service.Events.Delete(r.Dst.CalendarID, r.Dst.EventID).Do(); err != nil {
 		return errors.Wrapf(err, "failed to delete event")
 	}
 	log.Printf("deleted event: %s\n", dstEvent.Id)
@@ -196,15 +196,15 @@ func (s *Manager) deleteExistingEvent(service *calendar.Service, r syncdb.Record
 
 func (s *Manager) mapRecurringEventId(syncMetadata syncMetadata, srcEvent *calendar.Event) (string, error) {
 	r, err := s.syncDB.Find(syncdb.Event{
-		Id:           srcEvent.RecurringEventId,
-		AccountEmail: syncMetadata.srcAccount,
-		CalendarId:   syncMetadata.srcCalendar,
-	}, syncMetadata.dstAccount, syncMetadata.dstCalendar)
+		EventID:      srcEvent.RecurringEventId,
+		AccountEmail: syncMetadata.srcAccountEmail,
+		CalendarID:   syncMetadata.srcCalendarID,
+	}, syncMetadata.dstAccountEmail, syncMetadata.dstCalendarID)
 	if err == syncdb.ErrNotFound {
 		return "", nil
 	}
 	if err != nil {
 		return "", err
 	}
-	return r.Dst.Id, nil
+	return r.Dst.EventID, nil
 }
