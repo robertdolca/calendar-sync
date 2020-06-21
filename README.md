@@ -2,6 +2,10 @@
 
 Keep any pair of two Google Calendars in sync.
 
+It can also use a public or a private (shared) calendar as source as long as
+the source calendar is added to the Google account's secondary / subscribed
+calendars list.
+
 ## Authenticate accounts
 
 ```bash
