@@ -32,7 +32,7 @@ func (s *Manager) Clear(ctx context.Context, accountEmail, calendarID string) er
 	}
 
 	for _, record := range records {
-		if err := s.deleteExistingEvent(service, record); err != nil {
+		if err := s.deleteDstEvent(service, record); err != nil {
 			return err
 		}
 	}

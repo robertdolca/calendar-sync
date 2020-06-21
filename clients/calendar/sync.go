@@ -155,7 +155,7 @@ func (s *Manager) syncExistingEvent(
 	log.Printf("existing event: %s\n", r.Dst.EventID)
 
 	if srcEvent.Status == "cancelled" {
-		return s.deleteExistingEvent(dstService, r)
+		return s.deleteDstEvent(dstService, r)
 	}
 
 	recurringEventId, err := s.mapRecurringEventId(syncMetadata, srcEvent)
@@ -174,7 +174,7 @@ func (s *Manager) syncExistingEvent(
 	return nil
 }
 
-func (s *Manager) deleteExistingEvent(service *calendar.Service, r syncdb.Record) error {
+func (s *Manager) deleteDstEvent(service *calendar.Service, r syncdb.Record) error {
 	log.Printf("delete event: %s\n", r.Dst.EventID)
 
 	dstEvent, err := service.Events.Get(r.Dst.CalendarID, r.Dst.EventID).Do()
