@@ -103,7 +103,15 @@ func (s *Manager) syncEvent(dstService *calendar.Service, syncMetadata syncMetad
 func (s *Manager) createEvent(dstService *calendar.Service, syncMetadata syncMetadata, srcEvent *calendar.Event) error {
 	log.Printf("create event")
 
-	dstEvent, err := dstService.Events.Insert(syncMetadata.dstCalendar, mapEvent(srcEvent)).Do()
+	recurringEventId, err := s.mapRecurringEventId(syncMetadata, srcEvent)
+	if err != nil {
+		return errors.Wrap(err, "failed to map recurring event id")
+	}
+
+	dstEvent := mapEvent(srcEvent)
+	dstEvent.RecurringEventId = recurringEventId
+
+	dstEvent, err = dstService.Events.Insert(syncMetadata.dstCalendar, dstEvent).Do()
 	if err != nil {
 		return errors.Wrapf(err, "failed to create event")
 	}
@@ -138,8 +146,16 @@ func (s *Manager) syncExistingEvent(
 	if srcEvent.Status == "cancelled" {
 		return s.deleteExistingEvent(dstService, syncMetadata, r)
 	}
-	_, err := dstService.Events.Update(syncMetadata.dstCalendar, r.Dst.Id, mapEvent(srcEvent)).Do()
+
+	recurringEventId, err := s.mapRecurringEventId(syncMetadata, srcEvent)
 	if err != nil {
+		return errors.Wrap(err, "failed to map recurring event id")
+	}
+
+	dstEvent := mapEvent(srcEvent)
+	dstEvent.RecurringEventId = recurringEventId
+
+	if dstEvent, err = dstService.Events.Update(syncMetadata.dstCalendar, r.Dst.Id, dstEvent).Do(); err != nil {
 		return errors.Wrapf(err, "failed to update event")
 	}
 	return nil
@@ -166,4 +182,19 @@ func (s *Manager) deleteExistingEvent(
 		return errors.Wrapf(err, "failed to delete event")
 	}
 	return s.syncDB.Delete(r.Src)
+}
+
+func (s *Manager) mapRecurringEventId(syncMetadata syncMetadata, srcEvent *calendar.Event) (string, error) {
+	r, err := s.syncDB.Find(syncdb.Event{
+		Id:           srcEvent.RecurringEventId,
+		AccountEmail: syncMetadata.srcAccount,
+		CalendarId:   syncMetadata.srcCalendar,
+	})
+	if err == syncdb.ErrNotFound {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return r.Dst.Id, nil
 }
