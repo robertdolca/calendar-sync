@@ -1,16 +1,16 @@
 package calendar
 
 import (
-	"calendar/clients/tmanager"
-	"calendar/clients/userinfo"
 	"context"
-	"encoding/json"
-	"fmt"
+	"time"
+
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
-	"time"
+
+	"calendar/clients/tmanager"
+	"calendar/clients/userinfo"
 )
 
 var (

@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+
+	"github.com/nightlyone/lockfile"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/calendar/v3"
 	goauth2 "google.golang.org/api/oauth2/v2"
-	"io/ioutil"
-	"log"
-	"os"
+
+	"calendar/clients/lockhelper"
 )
 
 const (
@@ -30,10 +33,16 @@ var (
 type Manager struct {
 	tokens []oauth2.Token
 	config oauth2.Config
+	tokensMutex lockfile.Lockfile
 }
 
 func New() (*Manager, error) {
-	tokens, err := readTokens()
+	tokensMutex, err := lockfile.New(lockhelper.FilePath("tokens.lock"))
+	if err != nil {
+		return nil, err
+	}
+
+	tokens, err := readTokens(tokensMutex)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +55,7 @@ func New() (*Manager, error) {
 	return &Manager{
 		tokens: tokens,
 		config: *config,
+		tokensMutex: tokensMutex,
 	}, nil
 }
 
@@ -56,7 +66,7 @@ func (m *Manager) List() []oauth2.Token {
 func (m *Manager) add(token oauth2.Token) error {
 	tokens := append([]oauth2.Token{}, m.tokens...)
 	tokens = append(tokens, token)
-	if err := save(tokens); err != nil {
+	if err := saveTokens(m.tokensMutex, tokens); err != nil {
 		return err
 	}
 	m.tokens = tokens
@@ -103,7 +113,17 @@ func readConfig() (*oauth2.Config, error) {
 }
 
 // Retrieves a token from a local file.
-func readTokens() ([]oauth2.Token, error) {
+func readTokens(mutex lockfile.Lockfile) ([]oauth2.Token, error) {
+	err := mutex.TryLock()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to acquire tokens file lock")
+	}
+
+	tokens, err := readTokenUnsafe()
+	return tokens, lockhelper.MutexUnlock(mutex, err)
+}
+
+func readTokenUnsafe() ([]oauth2.Token, error) {
 	tokens := make([]oauth2.Token, 0)
 
 	file, err := os.Open(tokensPath)
@@ -122,14 +142,22 @@ func readTokens() ([]oauth2.Token, error) {
 }
 
 // Saves a token to a file tokensPath.
-func save(tokens []oauth2.Token) error {
+func saveTokens(mutex lockfile.Lockfile, tokens []oauth2.Token) error {
+	err := mutex.TryLock()
+	if err != nil {
+		return errors.Wrapf(err, "failed to acquire tokens file lock")
+	}
+	return lockhelper.MutexUnlock(mutex, saveTokensUnsafe(tokens))
+}
+
+func saveTokensUnsafe(tokens []oauth2.Token) error {
 	file, err := os.OpenFile(tokensPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("unable to save oauth token: %v", err)
+		return errors.Wrapf(err, "unable to open tokens file in write mode")
 	}
 
 	if err := json.NewEncoder(file).Encode(tokens); err != nil {
-		return err
+		return errors.Wrapf(err, "unable to save oauth token")
 	}
 
 	return file.Close()
