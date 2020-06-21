@@ -77,7 +77,7 @@ Within the Google API app you need to create a
 The application type that should be selected is `Desktop app`.
 
 Once the OAuth 2.0 Client ID is created the JSON credentials file should be
-downloaded and placed next to the binary under the name `credentials.json`.
+downloaded and placed in the work directory under the name `credentials.json`.
 
 The Google Calendar API needs to be
 [enabled](https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview)
@@ -86,14 +86,14 @@ for the Google API app at.
 ### Local database
 
 The mapping between the source event id and the synced (copy) event id is
-maintained next to the binary in a folder called `sync.db`.
+maintained work directory and it is called `sync.db`.
 
 Removing the database can lead to duplicate events being created.
 
 ### Auth and refresh token
 
 When a new account is authorized the auth token and the refresh token are stored
-in a file called `tokens.json` next to the binary.
+in a file called `tokens.json` in the work directory.
 
 To remove an authorized account or re-trigger the OAuth flow simply delete the
 tokens file.

@@ -2,8 +2,8 @@ package lockhelper
 
 import (
 	"fmt"
+	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/nightlyone/lockfile"
@@ -11,11 +11,11 @@ import (
 )
 
 func FilePath(filename string) string{
-	ex, err := os.Executable()
+	wd, err := os.Getwd()
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
-	return fmt.Sprintf("%s/%s", filepath.Dir(ex), filename)
+	return fmt.Sprintf("%s/%s", wd, filename)
 }
 
 func MutexUnlock(mutex lockfile.Lockfile, err error) error {
