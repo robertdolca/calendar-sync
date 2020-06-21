@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/subcommands"
+	"github.com/pkg/errors"
 
 	"calendar/clients/calendar"
 )
@@ -44,9 +45,31 @@ func (p *authListCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (p *authListCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	if err := p.validateInput(); err != nil {
+		fmt.Println(err)
+		return subcommands.ExitUsageError
+	}
+
 	if err := p.sync.Sync(ctx, p.srcAccount, p.srcCalendar, p.dstAccount, p.dstCalendar); err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
 	}
+
 	return subcommands.ExitSuccess
+}
+
+func (p *authListCmd) validateInput() error {
+	if p.srcAccount == "" {
+		return errors.New("source account email not specified")
+	}
+	if p.srcCalendar == "" {
+		return errors.New("source calendar id not specified")
+	}
+	if p.dstAccount == "" {
+		return errors.New("destination account email not specified")
+	}
+	if p.dstCalendar == "" {
+		return errors.New("destination calendar id not specified")
+	}
+	return nil
 }
