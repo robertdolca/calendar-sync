@@ -143,6 +143,8 @@ func (s *Manager) createEvent(dstService *calendar.Service, syncMetadata syncMet
 	if err = s.syncDB.Insert(record); err != nil {
 		return errors.Wrapf(err, "failed to save sync mapping")
 	}
+
+	log.Printf("created event: %s, %s\n", dstEvent.Id, dstEvent.RecurringEventId)
 	return nil
 }
 
