@@ -19,14 +19,14 @@ const (
 
 type CalendarInfo struct {
 	Summary string
-	Id string
+	Id      string
 	Deleted bool
 }
 
 type TokenCalendars struct {
-	Email string
+	Email     string
 	Calendars []CalendarInfo
-	Token oauth2.Token
+	Token     oauth2.Token
 }
 
 func calendarListEntryToCalendar(entry *calendar.CalendarListEntry) CalendarInfo {
@@ -36,7 +36,7 @@ func calendarListEntryToCalendar(entry *calendar.CalendarListEntry) CalendarInfo
 	}
 	return CalendarInfo{
 		Summary: summary,
-		Id: entry.Id,
+		Id:      entry.Id,
 		Deleted: entry.Deleted,
 	}
 }
@@ -71,9 +71,9 @@ func UsersCalendarsTokens(
 		}
 
 		result = append(result, TokenCalendars{
-			Email: email,
+			Email:     email,
 			Calendars: calendars,
-			Token: token,
+			Token:     token,
 		})
 	}
 
@@ -98,7 +98,6 @@ func calendars(ctx context.Context, config *oauth2.Config, token *oauth2.Token) 
 
 	return calendars, nil
 }
-
 
 func DeleteDstEvent(syncDB *syncdb.DB, dstService *calendar.Service, r syncdb.Record) error {
 	dstEvent, err := dstService.Events.Get(r.Dst.CalendarID, r.Dst.EventID).Do()

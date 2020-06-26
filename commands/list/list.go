@@ -16,7 +16,7 @@ type list struct {
 	calendarManager *calendar.Manager
 }
 
-func New(calendarManager *calendar.Manager) subcommands.Command  {
+func New(calendarManager *calendar.Manager) subcommands.Command {
 	return &list{
 		calendarManager: calendarManager,
 	}
@@ -63,5 +63,3 @@ func (p *list) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) s
 	}
 	return subcommands.ExitSuccess
 }
-
-

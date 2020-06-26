@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	tokensPath = "tokens.json"
+	tokensPath      = "tokens.json"
 	credentialsPath = "credentials.json"
 )
 
@@ -31,8 +31,8 @@ var (
 )
 
 type Manager struct {
-	tokens []oauth2.Token
-	config oauth2.Config
+	tokens      []oauth2.Token
+	config      oauth2.Config
 	tokensMutex lockfile.Lockfile
 }
 
@@ -53,8 +53,8 @@ func New() (*Manager, error) {
 	}
 
 	return &Manager{
-		tokens: tokens,
-		config: *config,
+		tokens:      tokens,
+		config:      *config,
 		tokensMutex: tokensMutex,
 	}, nil
 }
@@ -78,7 +78,7 @@ func (m *Manager) Config() *oauth2.Config {
 }
 
 // GetTokenFromWeb requests a token from the web, then returns the retrieved token.
-func (m *Manager) Auth(ctx context.Context, ) error {
+func (m *Manager) Auth(ctx context.Context) error {
 	config := m.Config()
 
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)

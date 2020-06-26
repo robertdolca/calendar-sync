@@ -15,7 +15,6 @@ import (
 	"github.com/robertdolca/calendar-sync/clients/userinfo"
 )
 
-
 type Request struct {
 	SrcCalendarID   string
 	DstCalendarID   string
@@ -25,7 +24,7 @@ type Request struct {
 }
 
 type job struct {
-	request   Request
+	request    Request
 	srcService *calendar.Service
 	dstService *calendar.Service
 	syncDB     *syncdb.DB
@@ -66,15 +65,14 @@ func RunSync(
 	}
 
 	job := &job{
-		request: request,
-		syncDB: syncDB,
+		request:    request,
+		syncDB:     syncDB,
 		srcService: srcService,
 		dstService: dstService,
 	}
 
 	return job.run(ctx)
 }
-
 
 func (s *job) run(ctx context.Context) error {
 	err := s.srcService.Events.
@@ -93,7 +91,6 @@ func (s *job) syncEvents(events *calendar.Events) error {
 	}
 	return nil
 }
-
 
 func (s *job) syncEvent(srcEvent *calendar.Event) error {
 	r, err := s.syncDB.Find(

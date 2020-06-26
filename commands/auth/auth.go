@@ -14,7 +14,7 @@ type auth struct {
 	tokenManager *tmanager.Manager
 }
 
-func New(tokenManager *tmanager.Manager) subcommands.Command  {
+func New(tokenManager *tmanager.Manager) subcommands.Command {
 	return &auth{
 		tokenManager: tokenManager,
 	}

@@ -16,20 +16,20 @@ import (
 
 type Manager struct {
 	tokenManager *tmanager.Manager
-	userInfo *userinfo.Manager
-	syncDB *syncdb.DB
+	userInfo     *userinfo.Manager
+	syncDB       *syncdb.DB
 }
 
 type UserCalendars struct {
-	Email string
+	Email     string
 	Calendars []ccommon.CalendarInfo
 }
 
 func New(tokenManager *tmanager.Manager, userInfo *userinfo.Manager, syncDB *syncdb.DB) *Manager {
 	return &Manager{
 		tokenManager: tokenManager,
-		userInfo: userInfo,
-		syncDB: syncDB,
+		userInfo:     userInfo,
+		syncDB:       syncDB,
 	}
 }
 
@@ -42,14 +42,13 @@ func (s *Manager) UsersCalendars(ctx context.Context) ([]UserCalendars, error) {
 	result := make([]UserCalendars, 0, len(calendarTokens))
 	for _, calendarToken := range calendarTokens {
 		result = append(result, UserCalendars{
-			Email: calendarToken.Email,
+			Email:     calendarToken.Email,
 			Calendars: calendarToken.Calendars,
 		})
 	}
 
 	return result, nil
 }
-
 
 func (s *Manager) Clear(ctx context.Context, accountEmail, calendarID string) error {
 	calendarTokens, err := ccommon.UsersCalendarsTokens(ctx, s.userInfo, s.tokenManager)
@@ -67,7 +66,6 @@ func (s *Manager) Clear(ctx context.Context, accountEmail, calendarID string) er
 	if err != nil {
 		return errors.Wrap(err, "unable to create calendar client")
 	}
-
 
 	records, err := s.syncDB.ListDst(accountEmail, calendarID)
 	if err != nil {

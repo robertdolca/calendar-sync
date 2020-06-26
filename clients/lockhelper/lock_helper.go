@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func FilePath(filename string) string{
+func FilePath(filename string) string {
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Println(err)

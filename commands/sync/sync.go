@@ -22,7 +22,7 @@ type syncCmd struct {
 	syncInterval    time.Duration
 }
 
-func New(syncManager *calendar.Manager) subcommands.Command  {
+func New(syncManager *calendar.Manager) subcommands.Command {
 	return &syncCmd{
 		sync: syncManager,
 	}

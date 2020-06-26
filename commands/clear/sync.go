@@ -12,12 +12,12 @@ import (
 )
 
 type clearCmd struct {
-	sync *calendar.Manager
-	account string
+	sync     *calendar.Manager
+	account  string
 	calendar string
 }
 
-func New(sync *calendar.Manager) subcommands.Command  {
+func New(sync *calendar.Manager) subcommands.Command {
 	return &clearCmd{
 		sync: sync,
 	}

@@ -16,7 +16,7 @@ var (
 
 type DB struct {
 	fileMutex lockfile.Lockfile
-	db *badger.DB
+	db        *badger.DB
 }
 
 type Record struct {
@@ -43,7 +43,7 @@ func New() (*DB, error) {
 
 	return &DB{
 		fileMutex: fileMutex,
-		db: db,
+		db:        db,
 	}, nil
 }
 
@@ -140,8 +140,8 @@ func (db *DB) Close() error {
 func buildKey(event Event, dstAccountEmail, dstCalendarId string) []byte {
 	return []byte(
 		event.AccountEmail + event.CalendarID +
-		dstAccountEmail + dstCalendarId +
-		event.EventID,
+			dstAccountEmail + dstCalendarId +
+			event.EventID,
 	)
 }
 
