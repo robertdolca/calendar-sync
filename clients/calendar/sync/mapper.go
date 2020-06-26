@@ -4,7 +4,7 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func mapEvent(event *calendar.Event, copyDescription bool) *calendar.Event {
+func mapEvent(event *calendar.Event, copyDescription bool, copyLocation bool) *calendar.Event {
 	if event == nil {
 		return nil
 	}
@@ -14,7 +14,6 @@ func mapEvent(event *calendar.Event, copyDescription bool) *calendar.Event {
 		End:                mapEventDateTime(event.End),
 		EndTimeUnspecified: event.EndTimeUnspecified,
 		Kind:               event.Kind,
-		Location:           event.Location,
 		OriginalStartTime:  mapEventDateTime(event.OriginalStartTime),
 		Recurrence:         event.Recurrence,
 		Start:              mapEventDateTime(event.Start),
@@ -24,6 +23,9 @@ func mapEvent(event *calendar.Event, copyDescription bool) *calendar.Event {
 	}
 	if copyDescription {
 		result.Description = event.Description
+	}
+	if copyLocation {
+		result.Location = event.Location
 	}
 	return result
 }

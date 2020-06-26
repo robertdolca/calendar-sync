@@ -14,13 +14,14 @@ import (
 )
 
 type syncCmd struct {
-	sync               *calendar.Manager
-	srcAccountEmail    string
-	srcCalendarID      string
-	dstAccountEmail    string
-	dstCalendarID      string
-	includeDescription bool
-	syncInterval       time.Duration
+	sync            *calendar.Manager
+	srcAccountEmail string
+	srcCalendarID   string
+	dstAccountEmail string
+	dstCalendarID   string
+	copyDescription bool
+	copyLocation    bool
+	syncInterval    time.Duration
 }
 
 func New(syncManager *calendar.Manager) subcommands.Command {
@@ -46,7 +47,8 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.srcCalendarID, "src-calendar", "", "Source calendar id")
 	f.StringVar(&p.dstAccountEmail, "dst-account", "", "Destination account email address")
 	f.StringVar(&p.dstCalendarID, "dst-calendar", "", "Destination calendar id")
-	f.BoolVar(&p.includeDescription, "include-description", false, "Copy the event description")
+	f.BoolVar(&p.copyDescription, "copy-description", false, "Copy the event description")
+	f.BoolVar(&p.copyLocation, "copy-location", false, "Copy the event location")
 	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
 }
 
@@ -57,12 +59,13 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 	}
 
 	request := sync.Request{
-		SrcAccountEmail:    p.srcAccountEmail,
-		SrcCalendarID:      p.srcCalendarID,
-		DstAccountEmail:    p.dstAccountEmail,
-		DstCalendarID:      p.dstCalendarID,
-		SyncInterval:       p.syncInterval,
-		IncludeDescription: p.includeDescription,
+		SrcAccountEmail: p.srcAccountEmail,
+		SrcCalendarID:   p.srcCalendarID,
+		DstAccountEmail: p.dstAccountEmail,
+		DstCalendarID:   p.dstCalendarID,
+		SyncInterval:    p.syncInterval,
+		CopyDescription: p.copyDescription,
+		CopyLocation:    p.copyLocation,
 	}
 
 	if err := p.sync.Sync(ctx, request); err != nil {

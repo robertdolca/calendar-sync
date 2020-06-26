@@ -16,12 +16,13 @@ import (
 )
 
 type Request struct {
-	SrcCalendarID      string
-	DstCalendarID      string
-	SrcAccountEmail    string
-	DstAccountEmail    string
-	IncludeDescription bool
-	SyncInterval       time.Duration
+	SrcCalendarID   string
+	DstCalendarID   string
+	SrcAccountEmail string
+	DstAccountEmail string
+	CopyDescription bool
+	CopyLocation    bool
+	SyncInterval    time.Duration
 }
 
 type job struct {
@@ -126,7 +127,7 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 		return errors.Wrap(err, "failed to map recurring event id")
 	}
 
-	dstEvent := mapEvent(srcEvent, s.request.IncludeDescription)
+	dstEvent := mapEvent(srcEvent, s.request.CopyDescription, s.request.CopyLocation)
 	dstEvent.RecurringEventId = recurringEventId
 
 	dstEvent, err = s.dstService.Events.Insert(s.request.DstCalendarID, dstEvent).Do()
@@ -167,7 +168,7 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 		return errors.Wrap(err, "failed to map recurring event id")
 	}
 
-	dstEvent := mapEvent(srcEvent, s.request.IncludeDescription)
+	dstEvent := mapEvent(srcEvent, s.request.CopyDescription, s.request.CopyLocation)
 	dstEvent.RecurringEventId = recurringEventId
 
 	if dstEvent, err = s.dstService.Events.Update(s.request.DstCalendarID, r.Dst.EventID, dstEvent).Do(); err != nil {
