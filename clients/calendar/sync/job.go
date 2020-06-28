@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 
@@ -38,10 +39,12 @@ type MappingOptions struct {
 }
 
 type job struct {
-	request    Request
-	srcService *calendar.Service
-	dstService *calendar.Service
-	syncDB     *syncdb.DB
+	ctx          context.Context
+	request      Request
+	srcService   *calendar.Service
+	dstService   *calendar.Service
+	syncDB       *syncdb.DB
+	rateLLimiter *rate.Limiter
 }
 
 func RunSync(
@@ -79,20 +82,22 @@ func RunSync(
 	}
 
 	job := &job{
-		request:    request,
-		syncDB:     syncDB,
-		srcService: srcService,
-		dstService: dstService,
+		ctx:          ctx,
+		request:      request,
+		syncDB:       syncDB,
+		srcService:   srcService,
+		dstService:   dstService,
+		rateLLimiter: rate.NewLimiter(rate.Every(250*time.Millisecond), 1),
 	}
 
-	return job.run(ctx)
+	return job.run()
 }
 
-func (s *job) run(ctx context.Context) error {
+func (s *job) run() error {
 	err := s.srcService.Events.
 		List(s.request.SrcCalendarID).
 		UpdatedMin(time.Now().Add(-s.request.SyncInterval).Format(time.RFC3339)).
-		Pages(ctx, s.syncEvents)
+		Pages(s.ctx, s.syncEvents)
 
 	return errors.Wrap(err, "unable to sync events")
 }
@@ -102,6 +107,10 @@ func (s *job) syncEvents(events *calendar.Events) error {
 		if err := s.syncEvent(srcEvent); err != nil {
 			return err
 		}
+	}
+	// wait for a slot before next page
+	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
+		return err
 	}
 	return nil
 }
@@ -162,6 +171,9 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 	dstEvent := mapEvent(srcEvent, s.request.MappingOptions)
 	dstEvent.RecurringEventId = recurringEventId
 
+	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
+		return err
+	}
 	dstEvent, err = s.dstService.Events.Insert(s.request.DstCalendarID, dstEvent).Do()
 	if err != nil {
 		return errors.Wrapf(err, "failed to create event")
@@ -203,6 +215,9 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 	dstEvent := mapEvent(srcEvent, s.request.MappingOptions)
 	dstEvent.RecurringEventId = recurringEventId
 
+	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
+		return err
+	}
 	if dstEvent, err = s.dstService.Events.Update(s.request.DstCalendarID, r.Dst.EventID, dstEvent).Do(); err != nil {
 		return errors.Wrapf(err, "failed to update event")
 	}
@@ -213,6 +228,9 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 
 func (s *job) deleteDstEvent(r syncdb.Record) error {
 	log.Printf("delete event: %s\n", r.Src.EventID)
+	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
+		return err
+	}
 	return ccommon.DeleteDstEvent(s.syncDB, s.dstService, r)
 }
 
@@ -253,6 +271,9 @@ func (s *job) deleteRecurringEventInstance(srcEvent *calendar.Event) error {
 		start = srcEvent.OriginalStartTime.Date
 	}
 
+	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
+		return err
+	}
 	dstInstances, err := s.dstService.Events.
 		Instances(s.request.DstCalendarID, recurringEventId).
 		OriginalStart(start).
@@ -267,6 +288,9 @@ func (s *job) deleteRecurringEventInstance(srcEvent *calendar.Event) error {
 	}
 
 	dstEvent := dstInstances.Items[0]
+	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
+		return err
+	}
 	if err := s.dstService.Events.Delete(s.request.DstCalendarID, dstEvent.Id).Do(); err != nil {
 		return errors.Wrapf(err, "failed to delete event")
 	}
