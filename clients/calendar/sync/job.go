@@ -208,13 +208,17 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 		return s.deleteDstEvent(r)
 	}
 
-	recurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
+	mappedRecurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
 	if err != nil {
 		return errors.Wrap(err, "failed to map recurring event id")
 	}
 
+	if srcEvent.RecurringEventId != "" && mappedRecurringEventId == "" {
+		return errors.New("cannot sync recurring event instance when recurring event id not found")
+	}
+
 	dstEvent := mapEvent(srcEvent, s.request.MappingOptions)
-	dstEvent.RecurringEventId = recurringEventId
+	dstEvent.RecurringEventId = mappedRecurringEventId
 
 	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
 		return err
