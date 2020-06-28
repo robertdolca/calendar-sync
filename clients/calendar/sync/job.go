@@ -28,7 +28,8 @@ type Request struct {
 	IncludeNotResponded bool
 	IncludeOutOfOffice  bool
 	ExcludeTitleRegex   *regexp.Regexp
-	SyncInterval        time.Duration
+	UpdateInterval      time.Duration
+	StartAfter          time.Time
 	MappingOptions      MappingOptions
 }
 
@@ -100,8 +101,12 @@ func (s *job) run() error {
 		List(s.request.SrcCalendarID).
 		OrderBy("updated")
 
-	if s.request.SyncInterval != 0 {
-		call = call.UpdatedMin(time.Now().Add(-s.request.SyncInterval).Format(time.RFC3339))
+	if s.request.UpdateInterval != 0 {
+		call = call.UpdatedMin(time.Now().Add(-s.request.UpdateInterval).Format(time.RFC3339))
+	}
+
+	if !s.request.StartAfter.IsZero() {
+		call = call.TimeMin(s.request.StartAfter.Format(time.RFC3339))
 	}
 
 	err := call.Pages(s.ctx, s.syncEvents)

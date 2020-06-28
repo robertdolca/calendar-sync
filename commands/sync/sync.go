@@ -30,7 +30,8 @@ type syncCmd struct {
 	titleOverride       string
 	visibility          string
 	excludeTitleRegex   string
-	syncInterval        time.Duration
+	updateInterval      time.Duration
+	startAfter          string
 }
 
 func New(syncManager *calendar.Manager) subcommands.Command {
@@ -68,7 +69,8 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&p.includeNotResponded, "include-not-responded", false, "Copy events without RSVP response (default: false)")
 	f.BoolVar(&p.includeOutOfOffice, "include-out-of-office", false, "Copy out of office events (default: false)")
 
-	f.DurationVar(&p.syncInterval, "interval", 0, "Only list events updated with the specified time window (eg. 3h)")
+	f.DurationVar(&p.updateInterval, "update-interval", 0, "Only list events updated with the specified time window (eg. 3h)")
+	f.StringVar(&p.startAfter, "start-after", "", "Only copy events that start after the specified date and time (eg. 2006-01-02T15:04:05Z07:00)")
 }
 
 func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -87,17 +89,28 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 		}
 	}
 
+	var startAfter time.Time
+	if p.startAfter != "" {
+		var err error
+		startAfter, err = time.Parse(time.RFC3339, p.startAfter)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("failed to parse start after date and time: %s", err))
+			return subcommands.ExitUsageError
+		}
+	}
+
 	request := sync.Request{
 		SrcAccountEmail:     p.srcAccountEmail,
 		SrcCalendarID:       p.srcCalendarID,
 		DstAccountEmail:     p.dstAccountEmail,
 		DstCalendarID:       p.dstCalendarID,
-		SyncInterval:        p.syncInterval,
+		UpdateInterval:      p.updateInterval,
 		IncludeTentative:    p.includeTentative,
 		IncludeNotGoing:     p.includeNotGoing,
 		IncludeNotResponded: p.includeNotResponded,
 		ExcludeTitleRegex:   excludeTitleRegex,
 		IncludeOutOfOffice:  p.includeOutOfOffice,
+		StartAfter:          startAfter,
 		MappingOptions: sync.MappingOptions{
 			CopyDescription: p.copyDescription,
 			CopyLocation:    p.copyLocation,
