@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/google/subcommands"
@@ -27,6 +28,7 @@ type syncCmd struct {
 	includeNotResponded bool
 	titleOverride       string
 	visibility          string
+	excludeTitleRegex   string
 	syncInterval        time.Duration
 }
 
@@ -55,6 +57,7 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.dstCalendarID, "dst-calendar", "", "Destination calendar id")
 	f.StringVar(&p.titleOverride, "title-override", "", "Is specified the title of all events will be replaced by this")
 	f.StringVar(&p.visibility, "visibility", "default", "Event visibility (options: default / public / private)")
+	f.StringVar(&p.excludeTitleRegex, "exclude-title-regex", "", "Am optional regular expression to exclude events when the title matches")
 
 	f.BoolVar(&p.copyDescription, "copy-description", false, "Copy the event description (default: false)")
 	f.BoolVar(&p.copyLocation, "copy-location", false, "Copy the event location (default: false)")
@@ -72,6 +75,16 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitUsageError
 	}
 
+	var excludeTitleRegex *regexp.Regexp
+	if p.excludeTitleRegex != "" {
+		var err error
+		excludeTitleRegex, err = regexp.Compile(p.excludeTitleRegex)
+		if err != nil {
+			fmt.Println(fmt.Sprintf("regular expression comillation error: %s", err))
+			return subcommands.ExitUsageError
+		}
+	}
+
 	request := sync.Request{
 		SrcAccountEmail:     p.srcAccountEmail,
 		SrcCalendarID:       p.srcCalendarID,
@@ -81,6 +94,7 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 		IncludeTentative:    p.includeTentative,
 		IncludeNotGoing:     p.includeNotGoing,
 		IncludeNotResponded: p.includeNotResponded,
+		ExcludeTitleRegex:   excludeTitleRegex,
 		MappingOptions: sync.MappingOptions{
 			CopyDescription: p.copyDescription,
 			CopyLocation:    p.copyLocation,
