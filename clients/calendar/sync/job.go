@@ -126,13 +126,10 @@ func (s *job) syncEvent(srcEvent *calendar.Event) error {
 		s.request.DstCalendarID,
 	)
 	if err == syncdb.ErrNotFound {
-		if srcEvent.Status == ccommon.EventStatusCancelled {
+		if srcEvent.Status == ccommon.EventStatusCancelled || s.shouldExclude(srcEvent) {
 			if srcEvent.RecurringEventId != "" {
 				return s.deleteRecurringEventInstance(srcEvent)
 			}
-			return nil
-		}
-		if s.shouldExclude(srcEvent) {
 			return nil
 		}
 		return s.createEvent(srcEvent)
