@@ -9,7 +9,6 @@ func mapEvent(event *calendar.Event, mappingOptions MappingOptions) *calendar.Ev
 		return nil
 	}
 	result := &calendar.Event{
-		ColorId:            event.ColorId,
 		Created:            event.Created,
 		End:                mapEventDateTime(event.End),
 		EndTimeUnspecified: event.EndTimeUnspecified,
@@ -20,6 +19,9 @@ func mapEvent(event *calendar.Event, mappingOptions MappingOptions) *calendar.Ev
 		Status:             event.Status,
 		Summary:            event.Summary,
 		Transparency:       event.Transparency,
+	}
+	if mappingOptions.CopyColor {
+		result.ColorId = event.ColorId
 	}
 	if mappingOptions.CopyDescription {
 		result.Description = event.Description

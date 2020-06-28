@@ -16,12 +16,15 @@ import (
 )
 
 type Request struct {
-	SrcCalendarID   string
-	DstCalendarID   string
-	SrcAccountEmail string
-	DstAccountEmail string
-	SyncInterval    time.Duration
-	MappingOptions  MappingOptions
+	SrcCalendarID       string
+	DstCalendarID       string
+	SrcAccountEmail     string
+	DstAccountEmail     string
+	IncludeTentative    bool
+	IncludeNotGoing     bool
+	IncludeNotResponded bool
+	SyncInterval        time.Duration
+	MappingOptions      MappingOptions
 }
 
 type MappingOptions struct {
@@ -29,6 +32,7 @@ type MappingOptions struct {
 	CopyLocation    bool
 	TitleOverride   string
 	Visibility      string
+	CopyColor       bool
 }
 
 type job struct {
@@ -117,12 +121,29 @@ func (s *job) syncEvent(srcEvent *calendar.Event) error {
 			}
 			return nil
 		}
+		if s.shouldExclude(srcEvent) {
+			return nil
+		}
 		return s.createEvent(srcEvent)
 	}
 	if err != nil {
 		return err
 	}
 	return s.syncExistingEvent(srcEvent, r)
+}
+
+func (s *job) shouldExclude(event *calendar.Event) bool {
+	responseStatus := eventResponseStatus(event)
+	if !s.request.IncludeNotGoing && responseStatus == "declined" {
+		return true
+	}
+	if !s.request.IncludeTentative && responseStatus == "tentative" {
+		return true
+	}
+	if !s.request.IncludeNotResponded && responseStatus == "needsAction" {
+		return true
+	}
+	return false
 }
 
 func (s *job) createEvent(srcEvent *calendar.Event) error {
@@ -165,7 +186,7 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error {
 	log.Printf("existing event: %s\n", r.Src.EventID)
 
-	if srcEvent.Status == "cancelled" {
+	if srcEvent.Status == "cancelled" || s.shouldExclude(srcEvent) {
 		return s.deleteDstEvent(r)
 	}
 
@@ -247,4 +268,14 @@ func (s *job) deleteRecurringEventInstance(srcEvent *calendar.Event) error {
 
 	log.Printf("deleted recurring event instance: %s\n", srcEvent.Id)
 	return nil
+}
+
+func eventResponseStatus(event *calendar.Event) string {
+	for _, attendee := range event.Attendees {
+		if !attendee.Self {
+			continue
+		}
+		return attendee.ResponseStatus
+	}
+	return "unknown"
 }

@@ -14,16 +14,20 @@ import (
 )
 
 type syncCmd struct {
-	sync            *calendar.Manager
-	srcAccountEmail string
-	srcCalendarID   string
-	dstAccountEmail string
-	dstCalendarID   string
-	copyDescription bool
-	copyLocation    bool
-	titleOverride   string
-	visibility      string
-	syncInterval    time.Duration
+	sync                *calendar.Manager
+	srcAccountEmail     string
+	srcCalendarID       string
+	dstAccountEmail     string
+	dstCalendarID       string
+	copyDescription     bool
+	copyLocation        bool
+	copyColor           bool
+	includeTentative    bool
+	includeNotGoing     bool
+	includeNotResponded bool
+	titleOverride       string
+	visibility          string
+	syncInterval        time.Duration
 }
 
 func New(syncManager *calendar.Manager) subcommands.Command {
@@ -49,10 +53,16 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.srcCalendarID, "src-calendar", "", "Source calendar id")
 	f.StringVar(&p.dstAccountEmail, "dst-account", "", "Destination account email address")
 	f.StringVar(&p.dstCalendarID, "dst-calendar", "", "Destination calendar id")
-	f.BoolVar(&p.copyDescription, "copy-description", false, "Copy the event description (default: false)")
-	f.BoolVar(&p.copyLocation, "copy-location", false, "Copy the event location (default: false)")
 	f.StringVar(&p.titleOverride, "title-override", "", "Is specified the title of all events will be replaced by this")
 	f.StringVar(&p.visibility, "visibility", "default", "Event visibility (options: default / public / private)")
+
+	f.BoolVar(&p.copyDescription, "copy-description", false, "Copy the event description (default: false)")
+	f.BoolVar(&p.copyLocation, "copy-location", false, "Copy the event location (default: false)")
+	f.BoolVar(&p.copyColor, "copy-color", false, "Copy the event color (default: false)")
+	f.BoolVar(&p.includeTentative, "include-tentative", false, "Copy events RSVP'ed as Maybe (default: false)")
+	f.BoolVar(&p.includeNotGoing, "include-not-going", false, "Copy events RSVP'ed as No (default: false)")
+	f.BoolVar(&p.includeNotResponded, "include-not-responded", false, "Copy events without RSVP response (default: false)")
+
 	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
 }
 
@@ -63,14 +73,18 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 	}
 
 	request := sync.Request{
-		SrcAccountEmail: p.srcAccountEmail,
-		SrcCalendarID:   p.srcCalendarID,
-		DstAccountEmail: p.dstAccountEmail,
-		DstCalendarID:   p.dstCalendarID,
-		SyncInterval:    p.syncInterval,
+		SrcAccountEmail:     p.srcAccountEmail,
+		SrcCalendarID:       p.srcCalendarID,
+		DstAccountEmail:     p.dstAccountEmail,
+		DstCalendarID:       p.dstCalendarID,
+		SyncInterval:        p.syncInterval,
+		IncludeTentative:    p.includeTentative,
+		IncludeNotGoing:     p.includeNotGoing,
+		IncludeNotResponded: p.includeNotResponded,
 		MappingOptions: sync.MappingOptions{
 			CopyDescription: p.copyDescription,
 			CopyLocation:    p.copyLocation,
+			CopyColor:       p.copyColor,
 			TitleOverride:   p.titleOverride,
 			Visibility:      p.visibility,
 		},
