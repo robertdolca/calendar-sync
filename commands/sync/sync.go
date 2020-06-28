@@ -26,6 +26,7 @@ type syncCmd struct {
 	includeTentative    bool
 	includeNotGoing     bool
 	includeNotResponded bool
+	includeOutOfOffice  bool
 	titleOverride       string
 	visibility          string
 	excludeTitleRegex   string
@@ -65,6 +66,7 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&p.includeTentative, "include-tentative", false, "Copy events RSVP'ed as Maybe (default: false)")
 	f.BoolVar(&p.includeNotGoing, "include-not-going", false, "Copy events RSVP'ed as No (default: false)")
 	f.BoolVar(&p.includeNotResponded, "include-not-responded", false, "Copy events without RSVP response (default: false)")
+	f.BoolVar(&p.includeOutOfOffice, "include-out-of-office", false, "Copy out of office events (default: false)")
 
 	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
 }
@@ -95,6 +97,7 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 		IncludeNotGoing:     p.includeNotGoing,
 		IncludeNotResponded: p.includeNotResponded,
 		ExcludeTitleRegex:   excludeTitleRegex,
+		IncludeOutOfOffice:  p.includeOutOfOffice,
 		MappingOptions: sync.MappingOptions{
 			CopyDescription: p.copyDescription,
 			CopyLocation:    p.copyLocation,

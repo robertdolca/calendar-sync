@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -25,6 +26,7 @@ type Request struct {
 	IncludeTentative    bool
 	IncludeNotGoing     bool
 	IncludeNotResponded bool
+	IncludeOutOfOffice  bool
 	ExcludeTitleRegex   *regexp.Regexp
 	SyncInterval        time.Duration
 	MappingOptions      MappingOptions
@@ -150,6 +152,9 @@ func (s *job) shouldExclude(event *calendar.Event) bool {
 		return true
 	}
 	if !s.request.IncludeNotResponded && responseStatus == "needsAction" {
+		return true
+	}
+	if !s.request.IncludeOutOfOffice && strings.HasPrefix(event.Description, "This is an out-of-office event") {
 		return true
 	}
 	if s.request.ExcludeTitleRegex != nil && s.request.ExcludeTitleRegex.MatchString(event.Summary) {
