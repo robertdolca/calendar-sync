@@ -68,7 +68,7 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&p.includeNotResponded, "include-not-responded", false, "Copy events without RSVP response (default: false)")
 	f.BoolVar(&p.includeOutOfOffice, "include-out-of-office", false, "Copy out of office events (default: false)")
 
-	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
+	f.DurationVar(&p.syncInterval, "interval", 0, "The time window to look back for calendar changes (eg. 3h)")
 }
 
 func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {

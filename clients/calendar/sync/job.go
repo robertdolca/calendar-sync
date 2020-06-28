@@ -96,11 +96,15 @@ func RunSync(
 }
 
 func (s *job) run() error {
-	err := s.srcService.Events.
+	call := s.srcService.Events.
 		List(s.request.SrcCalendarID).
-		UpdatedMin(time.Now().Add(-s.request.SyncInterval).Format(time.RFC3339)).
-		OrderBy("updated").
-		Pages(s.ctx, s.syncEvents)
+		OrderBy("updated")
+
+	if s.request.SyncInterval != 0 {
+		call = call.UpdatedMin(time.Now().Add(-s.request.SyncInterval).Format(time.RFC3339))
+	}
+
+	err := call.Pages(s.ctx, s.syncEvents)
 
 	return errors.Wrap(err, "unable to sync events")
 }
