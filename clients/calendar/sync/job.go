@@ -160,13 +160,17 @@ func (s *job) shouldExclude(event *calendar.Event) bool {
 func (s *job) createEvent(srcEvent *calendar.Event) error {
 	log.Println("create event")
 
-	recurringEventId, err := s.mapRecurringEventId(srcEvent)
+	mappedRecurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
 	if err != nil {
 		return errors.Wrap(err, "failed to map recurring event id")
 	}
 
+	if srcEvent.RecurringEventId != "" && mappedRecurringEventId == "" {
+		return errors.New("cannot create recurring event instance before the event")
+	}
+
 	dstEvent := mapEvent(srcEvent, s.request.MappingOptions)
-	dstEvent.RecurringEventId = recurringEventId
+	dstEvent.RecurringEventId = mappedRecurringEventId
 
 	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
 		return err
@@ -204,7 +208,7 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 		return s.deleteDstEvent(r)
 	}
 
-	recurringEventId, err := s.mapRecurringEventId(srcEvent)
+	recurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
 	if err != nil {
 		return errors.Wrap(err, "failed to map recurring event id")
 	}
@@ -231,10 +235,10 @@ func (s *job) deleteDstEvent(r syncdb.Record) error {
 	return ccommon.DeleteDstEvent(s.syncDB, s.dstService, r)
 }
 
-func (s *job) mapRecurringEventId(srcEvent *calendar.Event) (string, error) {
+func (s *job) mapRecurringEventId(recurringEventId string) (string, error) {
 	r, err := s.syncDB.Find(
 		syncdb.Event{
-			EventID:      srcEvent.RecurringEventId,
+			EventID:      recurringEventId,
 			AccountEmail: s.request.SrcAccountEmail,
 			CalendarID:   s.request.SrcCalendarID,
 		},
@@ -253,7 +257,7 @@ func (s *job) mapRecurringEventId(srcEvent *calendar.Event) (string, error) {
 func (s *job) deleteRecurringEventInstance(srcEvent *calendar.Event) error {
 	log.Printf("skipping event: %s\n", srcEvent.Id)
 
-	recurringEventId, err := s.mapRecurringEventId(srcEvent)
+	recurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
 	if err != nil {
 		return errors.Wrap(err, "failed to map recurring event id")
 	}
