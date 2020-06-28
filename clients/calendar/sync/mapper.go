@@ -4,7 +4,7 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-func mapEvent(event *calendar.Event, copyDescription bool, copyLocation bool) *calendar.Event {
+func mapEvent(event *calendar.Event, mappingOptions MappingOptions) *calendar.Event {
 	if event == nil {
 		return nil
 	}
@@ -21,11 +21,15 @@ func mapEvent(event *calendar.Event, copyDescription bool, copyLocation bool) *c
 		Summary:            event.Summary,
 		Transparency:       event.Transparency,
 	}
-	if copyDescription {
+	if mappingOptions.CopyDescription {
 		result.Description = event.Description
 	}
-	if copyLocation {
+	if mappingOptions.CopyLocation {
 		result.Location = event.Location
+	}
+	result.Visibility = mappingOptions.Visibility
+	if mappingOptions.TitleOverride != "" {
+		result.Summary = mappingOptions.TitleOverride
 	}
 	return result
 }

@@ -21,6 +21,8 @@ type syncCmd struct {
 	dstCalendarID   string
 	copyDescription bool
 	copyLocation    bool
+	titleOverride   string
+	visibility      string
 	syncInterval    time.Duration
 }
 
@@ -47,8 +49,10 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&p.srcCalendarID, "src-calendar", "", "Source calendar id")
 	f.StringVar(&p.dstAccountEmail, "dst-account", "", "Destination account email address")
 	f.StringVar(&p.dstCalendarID, "dst-calendar", "", "Destination calendar id")
-	f.BoolVar(&p.copyDescription, "copy-description", false, "Copy the event description")
-	f.BoolVar(&p.copyLocation, "copy-location", false, "Copy the event location")
+	f.BoolVar(&p.copyDescription, "copy-description", false, "Copy the event description (default: false)")
+	f.BoolVar(&p.copyLocation, "copy-location", false, "Copy the event location (default: false)")
+	f.StringVar(&p.titleOverride, "title-override", "", "Is specified the title of all events will be replaced by this")
+	f.StringVar(&p.visibility, "visibility", "default", "Event visibility (options: default / public / private)")
 	f.DurationVar(&p.syncInterval, "interval", time.Hour, "The time window to look back for calendar changes (3h, 5d)")
 }
 
@@ -64,8 +68,12 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 		DstAccountEmail: p.dstAccountEmail,
 		DstCalendarID:   p.dstCalendarID,
 		SyncInterval:    p.syncInterval,
-		CopyDescription: p.copyDescription,
-		CopyLocation:    p.copyLocation,
+		MappingOptions: sync.MappingOptions{
+			CopyDescription: p.copyDescription,
+			CopyLocation:    p.copyLocation,
+			TitleOverride:   p.titleOverride,
+			Visibility:      p.visibility,
+		},
 	}
 
 	if err := p.sync.Sync(ctx, request); err != nil {
@@ -74,6 +82,13 @@ func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}
 	}
 
 	return subcommands.ExitSuccess
+}
+
+func validateVisibility(visibility string) error {
+	if visibility == "public" || visibility == "private" || visibility == "default" {
+		return nil
+	}
+	return errors.Errorf("invalid visibility: %s", visibility)
 }
 
 func (p *syncCmd) validateInput() error {
@@ -88,6 +103,9 @@ func (p *syncCmd) validateInput() error {
 	}
 	if p.dstCalendarID == "" {
 		return errors.New("destination calendar id not specified")
+	}
+	if err := validateVisibility(p.visibility); err != nil {
+		return err
 	}
 	return nil
 }
