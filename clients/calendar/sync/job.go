@@ -97,6 +97,7 @@ func (s *job) run() error {
 	err := s.srcService.Events.
 		List(s.request.SrcCalendarID).
 		UpdatedMin(time.Now().Add(-s.request.SyncInterval).Format(time.RFC3339)).
+		OrderBy("updated").
 		Pages(s.ctx, s.syncEvents)
 
 	return errors.Wrap(err, "unable to sync events")
