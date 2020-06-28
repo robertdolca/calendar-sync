@@ -52,13 +52,13 @@ func (*syncCmd) Usage() string {
 }
 
 func (p *syncCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.srcAccountEmail, "src-account", "", "Source account email address")
-	f.StringVar(&p.srcCalendarID, "src-calendar", "", "Source calendar id")
-	f.StringVar(&p.dstAccountEmail, "dst-account", "", "Destination account email address")
-	f.StringVar(&p.dstCalendarID, "dst-calendar", "", "Destination calendar id")
-	f.StringVar(&p.titleOverride, "title-override", "", "Is specified the title of all events will be replaced by this")
+	f.StringVar(&p.srcAccountEmail, "src-account", "", "Source account email address (required)")
+	f.StringVar(&p.srcCalendarID, "src-calendar", "", "Source calendar id (required)")
+	f.StringVar(&p.dstAccountEmail, "dst-account", "", "Destination account email address (required)")
+	f.StringVar(&p.dstCalendarID, "dst-calendar", "", "Destination calendar id (required)")
+	f.StringVar(&p.titleOverride, "title-override", "", "Is specified the title of all events will be replaced by this (optional)")
 	f.StringVar(&p.visibility, "visibility", "default", "Event visibility (options: default / public / private)")
-	f.StringVar(&p.excludeTitleRegex, "exclude-title-regex", "", "Am optional regular expression to exclude events when the title matches")
+	f.StringVar(&p.excludeTitleRegex, "exclude-title-regex", "", "Regular expression to exclude events when the title matches (optional)")
 
 	f.BoolVar(&p.copyDescription, "copy-description", false, "Copy the event description (default: false)")
 	f.BoolVar(&p.copyLocation, "copy-location", false, "Copy the event location (default: false)")
@@ -68,7 +68,7 @@ func (p *syncCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&p.includeNotResponded, "include-not-responded", false, "Copy events without RSVP response (default: false)")
 	f.BoolVar(&p.includeOutOfOffice, "include-out-of-office", false, "Copy out of office events (default: false)")
 
-	f.DurationVar(&p.syncInterval, "interval", 0, "The time window to look back for calendar changes (eg. 3h)")
+	f.DurationVar(&p.syncInterval, "interval", 0, "Only list events updated with the specified time window (eg. 3h)")
 }
 
 func (p *syncCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
