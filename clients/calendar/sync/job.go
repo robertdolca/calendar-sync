@@ -158,7 +158,7 @@ func (s *job) shouldExclude(event *calendar.Event) bool {
 }
 
 func (s *job) createEvent(srcEvent *calendar.Event) error {
-	log.Println("create event")
+	log.Printf("creating event: %s, %s\n", srcEvent.Id, srcEvent.RecurringEventId)
 
 	mappedRecurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
 	if err != nil {
@@ -166,7 +166,8 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 	}
 
 	if srcEvent.RecurringEventId != "" && mappedRecurringEventId == "" {
-		return errors.New("cannot create recurring event instance before the event")
+		log.Println("skipping recurring event instance for recurring event that does not exist")
+		return nil
 	}
 
 	dstEvent := mapEvent(srcEvent, s.request.MappingOptions)
@@ -180,24 +181,30 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 		return errors.Wrapf(err, "failed to create event")
 	}
 
+	if err = s.createMapping(srcEvent.Id, dstEvent.Id); err != nil {
+		return err
+	}
+
+	log.Printf("created event: %s, %s\n", srcEvent.Id, srcEvent.RecurringEventId)
+	return nil
+}
+
+func (s *job) createMapping(srcEventId, dstEventId string) error {
 	record := syncdb.Record{
 		Src: syncdb.Event{
-			EventID:      srcEvent.Id,
+			EventID:      srcEventId,
 			AccountEmail: s.request.SrcAccountEmail,
 			CalendarID:   s.request.SrcCalendarID,
 		},
 		Dst: syncdb.Event{
-			EventID:      dstEvent.Id,
+			EventID:      dstEventId,
 			AccountEmail: s.request.DstAccountEmail,
 			CalendarID:   s.request.DstCalendarID,
 		},
 	}
-
-	if err = s.syncDB.Insert(record); err != nil {
+	if err := s.syncDB.Insert(record); err != nil {
 		return errors.Wrapf(err, "failed to save sync mapping")
 	}
-
-	log.Printf("created event: %s, %s\n", srcEvent.Id, srcEvent.RecurringEventId)
 	return nil
 }
 
@@ -214,7 +221,7 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 	}
 
 	if srcEvent.RecurringEventId != "" && mappedRecurringEventId == "" {
-		return errors.New("cannot sync recurring event instance when recurring event id not found")
+		return errors.New("cannot sync recurring event instance when recurring event id mapping not found")
 	}
 
 	dstEvent := mapEvent(srcEvent, s.request.MappingOptions)
