@@ -99,18 +99,19 @@ func calendars(ctx context.Context, config *oauth2.Config, token *oauth2.Token) 
 	return calendars, nil
 }
 
-func DeleteDstEvent(syncDB *syncdb.DB, dstService *calendar.Service, r syncdb.Record) error {
+func DeleteDstEvent(syncDB *syncdb.DB, dstService *calendar.Service, r syncdb.Record, softDelete bool) error {
 	dstEvent, err := dstService.Events.Get(r.Dst.CalendarID, r.Dst.EventID).Do()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get event before deletion")
 	}
 
-	if dstEvent.Status == EventStatusCancelled {
-		return syncDB.Delete(r)
+	if dstEvent.Status != EventStatusCancelled {
+		if err := dstService.Events.Delete(r.Dst.CalendarID, r.Dst.EventID).Do(); err != nil {
+			return errors.Wrapf(err, "failed to delete event")
+		}
 	}
-
-	if err := dstService.Events.Delete(r.Dst.CalendarID, r.Dst.EventID).Do(); err != nil {
-		return errors.Wrapf(err, "failed to delete event")
+	if softDelete {
+		return syncDB.SoftDelete(r)
 	}
 	return syncDB.Delete(r)
 }

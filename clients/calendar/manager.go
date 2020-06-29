@@ -73,7 +73,7 @@ func (s *Manager) Clear(ctx context.Context, accountEmail, calendarID string) er
 	}
 
 	for _, record := range records {
-		if err := ccommon.DeleteDstEvent(s.syncDB, service, record); err != nil {
+		if err := ccommon.DeleteDstEvent(s.syncDB, service, record, false); err != nil {
 			return err
 		}
 	}

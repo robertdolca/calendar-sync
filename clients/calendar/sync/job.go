@@ -136,10 +136,18 @@ func (s *job) syncEvent(srcEvent *calendar.Event) error {
 		},
 		s.request.DstAccountEmail,
 		s.request.DstCalendarID,
+		false,
 	)
 	if err == syncdb.ErrNotFound {
-		if srcEvent.Status == ccommon.EventStatusCancelled || s.shouldExclude(srcEvent) {
+		if srcEvent.Status == ccommon.EventStatusCancelled {
 			if srcEvent.RecurringEventId != "" {
+				return s.deleteRecurringEventInstance(srcEvent)
+			}
+			return nil
+		} else if s.shouldExclude(srcEvent) {
+			if srcEvent.Recurrence != nil {
+				return s.createExcludedRecurringEvent(srcEvent)
+			} else if srcEvent.RecurringEventId != "" {
 				return s.deleteRecurringEventInstance(srcEvent)
 			}
 			return nil
@@ -150,6 +158,26 @@ func (s *job) syncEvent(srcEvent *calendar.Event) error {
 		return err
 	}
 	return s.syncExistingEvent(srcEvent, r)
+}
+
+func (s *job) createExcludedRecurringEvent(event *calendar.Event) error {
+	if err := s.createEvent(event); err != nil {
+		return err
+	}
+	r, err := s.syncDB.Find(
+		syncdb.Event{
+			EventID:      event.Id,
+			AccountEmail: s.request.SrcAccountEmail,
+			CalendarID:   s.request.SrcCalendarID,
+		},
+		s.request.DstAccountEmail,
+		s.request.DstCalendarID,
+		false,
+	)
+	if err != nil {
+		return err
+	}
+	return s.deleteDstEvent(r, event.Recurrence != nil)
 }
 
 func (s *job) shouldExclude(event *calendar.Event) bool {
@@ -227,7 +255,7 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 	log.Printf("existing event: %s\n", r.Src.EventID)
 
 	if srcEvent.Status == "cancelled" || s.shouldExclude(srcEvent) {
-		return s.deleteDstEvent(r)
+		return s.deleteDstEvent(r, srcEvent.Recurrence != nil)
 	}
 
 	mappedRecurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
@@ -253,12 +281,12 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 	return nil
 }
 
-func (s *job) deleteDstEvent(r syncdb.Record) error {
-	log.Printf("delete event: %s\n", r.Src.EventID)
+func (s *job) deleteDstEvent(r syncdb.Record, softDelete bool) error {
+	log.Printf("delete event: %s, %t\n", r.Src.EventID, softDelete)
 	if err := s.rateLLimiter.Wait(s.ctx); err != nil {
 		return err
 	}
-	return ccommon.DeleteDstEvent(s.syncDB, s.dstService, r)
+	return ccommon.DeleteDstEvent(s.syncDB, s.dstService, r, softDelete)
 }
 
 func (s *job) mapRecurringEventId(recurringEventId string) (string, error) {
@@ -270,6 +298,7 @@ func (s *job) mapRecurringEventId(recurringEventId string) (string, error) {
 		},
 		s.request.DstAccountEmail,
 		s.request.DstCalendarID,
+		true,
 	)
 	if err == syncdb.ErrNotFound {
 		return "", nil

@@ -20,8 +20,9 @@ type DB struct {
 }
 
 type Record struct {
-	Src Event `json:"src"`
-	Dst Event `json:"dst"`
+	Src     Event `json:"src"`
+	Dst     Event `json:"dst"`
+	Deleted bool  `json:"deleted"`
 }
 
 type Event struct {
@@ -63,7 +64,7 @@ func (db *DB) Insert(r Record) error {
 	})
 }
 
-func (db *DB) Find(e Event, dstAccountEmail, dstCalendarID string) (Record, error) {
+func (db *DB) Find(e Event, dstAccountEmail, dstCalendarID string, includeSoftDeleted bool) (Record, error) {
 	var r Record
 
 	err := db.db.View(func(txn *badger.Txn) error {
@@ -84,6 +85,10 @@ func (db *DB) Find(e Event, dstAccountEmail, dstCalendarID string) (Record, erro
 
 		if err := json.Unmarshal(data, &r); err != nil {
 			return errors.Wrap(err, "failed to serialize record")
+		}
+
+		if !includeSoftDeleted && r.Deleted == true {
+			return ErrNotFound
 		}
 
 		return nil
@@ -122,6 +127,18 @@ func (db *DB) ListDst(accountEmail, calendarID string) ([]Record, error) {
 	})
 
 	return result, err
+}
+
+func (db *DB) SoftDelete(r Record) error {
+	rg, err := db.Find(r.Src, r.Dst.AccountEmail, r.Dst.CalendarID, true)
+	if err != nil {
+		return errors.Wrap(err, "failed to read record before soft deletion")
+	}
+	rg.Deleted = true
+	if err := db.Insert(rg); err != nil {
+		return errors.Wrap(err, "soft delete record update failed")
+	}
+	return nil
 }
 
 func (db *DB) Delete(r Record) error {
