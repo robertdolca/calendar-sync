@@ -44,7 +44,17 @@ calendar-sync sync \
   -src-calendar dj3snc3c \
   -dst-account accountB@custom-domain.com \
   -dst-calendar jab1rgf \
-  -interval 2h
+  -title-override "Work event" \
+  -copy-description \
+  -copy-location \
+  -include-not-going \
+  -include-not-responded \
+  -include-out-of-office \
+  -include-tentative \
+  -visibility private \
+  -start-after 2006-01-02T15:04:05-07:00 \
+  -exclude-title-regex '^(Busy \(personal\))|(❇️ Focus Time \(via Clockwise\))|(❇️ Lunch \(via Clockwise\))$' \
+  -update-interval 2h
 ```
 
 This will create events on the destination calendar if they are not already
