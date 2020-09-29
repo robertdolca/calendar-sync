@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 
 	"github.com/robertdolca/calendar-sync/clients/syncdb"
@@ -15,6 +16,7 @@ import (
 
 const (
 	EventStatusCancelled = "cancelled"
+	ErrCodeNotFound = 404
 )
 
 type CalendarInfo struct {
@@ -102,6 +104,9 @@ func calendars(ctx context.Context, config *oauth2.Config, token *oauth2.Token) 
 func DeleteDstEvent(syncDB *syncdb.DB, dstService *calendar.Service, r syncdb.Record, softDelete bool) error {
 	dstEvent, err := dstService.Events.Get(r.Dst.CalendarID, r.Dst.EventID).Do()
 	if err != nil {
+		if calendarErr, ok := err.(*googleapi.Error); ok && calendarErr.Code == ErrCodeNotFound {
+			return syncDB.Delete(r)
+		}
 		return errors.Wrapf(err, "failed to get event before deletion")
 	}
 

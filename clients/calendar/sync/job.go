@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 
 	"github.com/robertdolca/calendar-sync/clients/calendar/ccommon"
@@ -90,7 +91,7 @@ func RunSync(
 		syncDB:       syncDB,
 		srcService:   srcService,
 		dstService:   dstService,
-		rateLLimiter: rate.NewLimiter(rate.Every(250*time.Millisecond), 1),
+		rateLLimiter: rate.NewLimiter(rate.Every(350*time.Millisecond), 1),
 	}
 
 	return job.run()
@@ -152,16 +153,16 @@ func (s *job) syncEvent(srcEvent *calendar.Event) error {
 			}
 			return nil
 		}
-		return s.createEvent(srcEvent)
+		return s.createEvent(srcEvent, false)
 	}
 	if err != nil {
 		return err
 	}
-	return s.syncExistingEvent(srcEvent, r)
+	return s.syncExistingEvent(srcEvent, r, false)
 }
 
 func (s *job) createExcludedRecurringEvent(event *calendar.Event) error {
-	if err := s.createEvent(event); err != nil {
+	if err := s.createEvent(event, false); err != nil {
 		return err
 	}
 	r, err := s.syncDB.Find(
@@ -200,7 +201,7 @@ func (s *job) shouldExclude(event *calendar.Event) bool {
 	return false
 }
 
-func (s *job) createEvent(srcEvent *calendar.Event) error {
+func (s *job) createEvent(srcEvent *calendar.Event, isRetry bool) error {
 	log.Printf("creating event: %s, %s\n", srcEvent.Id, srcEvent.RecurringEventId)
 
 	mappedRecurringEventId, err := s.mapRecurringEventId(srcEvent.RecurringEventId)
@@ -221,6 +222,10 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 	}
 	dstEvent, err = s.dstService.Events.Insert(s.request.DstCalendarID, dstEvent).Do()
 	if err != nil {
+		shouldRetry, err := s.handleRecurringEventMappingIssue(err, srcEvent, isRetry)
+		if shouldRetry {
+			return s.createEvent(srcEvent, true)
+		}
 		return errors.Wrapf(err, "failed to create event")
 	}
 
@@ -230,6 +235,27 @@ func (s *job) createEvent(srcEvent *calendar.Event) error {
 
 	log.Printf("created event: %s, %s\n", srcEvent.Id, srcEvent.RecurringEventId)
 	return nil
+}
+
+func (s *job) handleRecurringEventMappingIssue(err error, srcEvent *calendar.Event, isRetry bool) (bool, error) {
+	calendarErr, ok := err.(*googleapi.Error)
+	if !ok {
+		return false, err
+	}
+
+	if calendarErr.Code != ccommon.ErrCodeNotFound {
+		return false, err
+	}
+
+	if err := s.deleteRecurringEventId(srcEvent.RecurringEventId); err != nil {
+		return false, errors.Wrapf(err, "failed to delete recurring event ID mapping during cleanup attempt")
+	}
+
+	if isRetry {
+		return false, errors.Errorf("notFound: mapping issue detected amd failed to fix")
+	}
+
+	return true, nil
 }
 
 func (s *job) createMapping(srcEventId, dstEventId string) error {
@@ -251,7 +277,7 @@ func (s *job) createMapping(srcEventId, dstEventId string) error {
 	return nil
 }
 
-func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error {
+func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record, isRetry bool) error {
 	log.Printf("existing event: %s\n", r.Src.EventID)
 
 	if srcEvent.Status == "cancelled" || s.shouldExclude(srcEvent) {
@@ -274,6 +300,10 @@ func (s *job) syncExistingEvent(srcEvent *calendar.Event, r syncdb.Record) error
 		return err
 	}
 	if dstEvent, err = s.dstService.Events.Update(s.request.DstCalendarID, r.Dst.EventID, dstEvent).Do(); err != nil {
+		shouldRetry, err := s.handleRecurringEventMappingIssue(err, srcEvent, isRetry)
+		if shouldRetry {
+			return s.syncExistingEvent(srcEvent, r, true)
+		}
 		return errors.Wrapf(err, "failed to update event")
 	}
 
@@ -307,6 +337,23 @@ func (s *job) mapRecurringEventId(recurringEventId string) (string, error) {
 		return "", err
 	}
 	return r.Dst.EventID, nil
+}
+
+func (s *job) deleteRecurringEventId(recurringEventId string) error {
+	r, err := s.syncDB.Find(
+		syncdb.Event{
+			EventID:      recurringEventId,
+			AccountEmail: s.request.SrcAccountEmail,
+			CalendarID:   s.request.SrcCalendarID,
+		},
+		s.request.DstAccountEmail,
+		s.request.DstCalendarID,
+		true,
+	)
+	if err != nil {
+		return err
+	}
+	return s.syncDB.Delete(r)
 }
 
 func (s *job) deleteRecurringEventInstance(srcEvent *calendar.Event) error {
